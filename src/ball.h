@@ -6,23 +6,24 @@
 #ifndef BALLS_H
 #define BALLS_H
 
-#define BALL_SPEED  2
+#define BALL_SPEED  1
 #define BALL_OFFSET 4
+#define BALL_WIDTH  8
+#define BALL_HEIGHT 8
 
 typedef struct {
   uint8_t speed;
   uint8_t sprite_index;
-  uint16_t x;
-  uint16_t y;
   int8_t xd;
   int8_t yd;
+  Rect rect;
   gfx_sprite sprite;
 } Ball;
 
 extern Ball ball;
 
 zos_err_t ball_init(uint8_t reset);
-void ball_bounce(int8_t cx, int8_t cy);
+void ball_bounce(Edge edge);
 void ball_move(void);
 void ball_draw(void);
 

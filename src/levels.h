@@ -8,7 +8,7 @@
 #define LEVEL_HEIGHT        8
 #define LEVEL_WIDTH         10
 #define LEVEL_COUNT         16
-#define LEVEL_TILE_COUNT    (LEVEL_WIDTH * 2) * LEVEL_HEIGHT
+#define LEVEL_TILE_COUNT    (LEVEL_WIDTH * LEVEL_HEIGHT)
 
 typedef struct {
   uint8_t index;

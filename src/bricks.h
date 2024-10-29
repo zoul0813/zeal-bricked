@@ -4,34 +4,34 @@
 #ifndef BRICKS_H
 #define BRICKS_H
 
-#define BRICK01      8
-#define BRICK02     10
-#define BRICK03     12
-#define BRICK04     14
-#define BRICK05     16
-#define BRICK06     18
-#define BRICK07     20
-#define BRICK08     22
-#define BRICK09     24
-#define BRICK10     26
-#define BRICK11     28
-#define BRICK12     30
-#define BRICK13     32
-#define BRICK14     34
-#define BRICK15     36
-#define BRICK16     38
-#define BRICK17     40
-#define BRICK18     42
-#define BRICK19     44
-#define BRICK20     46
-#define BRICK21     48
-#define BRICK22     50
-#define BRICK23     52
-#define BRICK24     54
-#define BRICK25     56
-#define BRICK26     58
-#define BRICK27     60
-#define BRICK28     52
+#define BRICK01      8U
+#define BRICK02     10U
+#define BRICK03     12U
+#define BRICK04     14U
+#define BRICK05     16U
+#define BRICK06     18U
+#define BRICK07     20U
+#define BRICK08     22U
+#define BRICK09     24U
+#define BRICK10     26U
+#define BRICK11     28U
+#define BRICK12     30U
+#define BRICK13     32U
+#define BRICK14     34U
+#define BRICK15     36U
+#define BRICK16     38U
+#define BRICK17     40U
+#define BRICK18     42U
+#define BRICK19     44U
+#define BRICK20     46U
+#define BRICK21     48U
+#define BRICK22     50U
+#define BRICK23     52U
+#define BRICK24     54U
+#define BRICK25     56U
+#define BRICK26     58U
+#define BRICK27     60U
+#define BRICK28     52U
 
 #define BRICK_COUNT 28
 
