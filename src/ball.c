@@ -15,8 +15,8 @@ zos_err_t ball_init(uint8_t reset) {
     ball.rect.y = ball.sprite.y + BALL_OFFSET;
     ball.rect.w = BALL_WIDTH;
     ball.rect.h = BALL_HEIGHT;
-    ball.xd = 1;
-    ball.yd = -1;
+    ball.direction.x = DIRECTION_RIGHT;
+    ball.direction.y = DIRECTION_UP;
     ball.speed = BALL_SPEED;
     ball.sprite_index = PLAYER_MAX_WIDTH + 2;
     err = gfx_sprite_render(&vctx, ball.sprite_index, &ball.sprite);
@@ -27,11 +27,11 @@ zos_err_t ball_init(uint8_t reset) {
 
 void ball_bounce(Edge edge) {
     // top/bottom
-    if(edge & EdgeTop) ball.yd = -1;
-    else if(edge & EdgeBottom) ball.yd = 1;
+    if(edge & EdgeBottom) ball.direction.y = DIRECTION_DOWN;
+    else if(edge & EdgeTop) ball.direction.y = DIRECTION_UP;
 
-    if(edge & EdgeRight) ball.xd = -1;
-    else if(edge & EdgeLeft) ball.xd = 1;
+    if(edge & EdgeRight) ball.direction.x = DIRECTION_LEFT;
+    else if(edge & EdgeLeft) ball.direction.x = DIRECTION_RIGHT;
 }
 
 void ball_move(void) {
@@ -39,25 +39,25 @@ void ball_move(void) {
     uint16_t x = ball.sprite.x;
     uint16_t y = ball.sprite.y;
 
-    x += ball.xd * ball.speed;
-    y += ball.yd * ball.speed;
+    x += ball.direction.x * ball.speed;
+    y += ball.direction.y * ball.speed;
 
     if((y <= SPRITE_HEIGHT - BALL_OFFSET)) {
-        ball_bounce(EdgeBottom); //ball.yd = 1;
+        ball_bounce(EdgeBottom); //ball.direction.y = 1;
         y = SPRITE_HEIGHT - BALL_OFFSET;
     }
     if((y >= SCREEN_HEIGHT + BALL_OFFSET)) {
-        ball_bounce(EdgeTop); //ball.yd = -1;
+        ball_bounce(EdgeTop); //ball.direction.y = -1;
         y = SCREEN_HEIGHT + BALL_OFFSET;
     }
 
     if((x <= SPRITE_WIDTH - BALL_OFFSET)) {
-        ball_bounce(EdgeLeft); // ball.xd = 1;
+        ball_bounce(EdgeLeft); // ball.direction.x = 1;
         x = SPRITE_WIDTH - BALL_OFFSET;
     }
 
     if((x >= SCREEN_WIDTH + BALL_OFFSET)) {
-        ball_bounce(EdgeRight); // ball.xd = -1;
+        ball_bounce(EdgeRight); // ball.direction.x = -1;
         x = SCREEN_WIDTH + BALL_OFFSET;
     }
 

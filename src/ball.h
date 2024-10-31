@@ -12,12 +12,11 @@
 #define BALL_HEIGHT 8
 
 typedef struct {
-  uint8_t speed;
   uint8_t sprite_index;
-  int8_t xd;
-  int8_t yd;
-  Rect rect;
   gfx_sprite sprite;
+  uint8_t speed;
+  Direction direction;
+  Rect rect;
 } Ball;
 
 extern Ball ball;
