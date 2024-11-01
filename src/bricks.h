@@ -4,6 +4,9 @@
 #ifndef BRICKS_H
 #define BRICKS_H
 
+#define BRICK_HEIGHT  TILE_HEIGHT
+#define BRICK_WIDTH   (TILE_WIDTH * 2)
+
 #define BRICK01      8U
 #define BRICK02     10U
 #define BRICK03     12U

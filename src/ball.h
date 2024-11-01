@@ -6,7 +6,7 @@
 #ifndef BALLS_H
 #define BALLS_H
 
-#define BALL_SPEED  1
+#define BALL_SPEED  2
 #define BALL_OFFSET 4
 #define BALL_WIDTH  8
 #define BALL_HEIGHT 8

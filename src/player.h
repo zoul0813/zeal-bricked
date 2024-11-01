@@ -1,28 +1,25 @@
-#include <stdio.h>
-#include <zos_sys.h>
-
 #include <stdint.h>
 #include <zvb_sprite.h>
-
+#include <zgdk.h>
 #include "bricked.h"
 
 #ifndef PLAYER_H
 #define PLAYER_H
 
 #define PLAYER_SPEED        3
-#define PLAYER_Y            (SCREEN_HEIGHT - SPRITE_HEIGHT - SPRITE_HEIGHT)
+#define PLAYER_Y            (SCREEN_HEIGHT - (SPRITE_HEIGHT / 2))
 #define PLAYER_MAX_WIDTH    3
 
 typedef struct {
     uint8_t sprite_index;
-    uint16_t x;
     gfx_sprite spritel;
     gfx_sprite spritem[3];
     gfx_sprite spriter;
-    uint8_t width;
+    Rect rect;
+    uint8_t width; // width of middle segments
     uint8_t speed;
     uint8_t score;
-    int8_t direction;
+    Direction direction;
 } Player;
 
 #define PADDLE1 64
@@ -39,6 +36,6 @@ void player_set_x(uint16_t x);
 void player_set_width(uint8_t width);
 zos_err_t player_init(uint8_t player_reset);
 void player_move(void);
-bool player_collide(uint16_t x, uint16_t y, uint8_t offset);
+Edge player_collide(Rect *rect);
 void player_draw(void);
 #endif

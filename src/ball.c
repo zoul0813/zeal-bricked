@@ -30,8 +30,8 @@ void ball_bounce(Edge edge) {
     if(edge & EdgeBottom) ball.direction.y = DIRECTION_DOWN;
     else if(edge & EdgeTop) ball.direction.y = DIRECTION_UP;
 
-    if(edge & EdgeRight) ball.direction.x = DIRECTION_LEFT;
-    else if(edge & EdgeLeft) ball.direction.x = DIRECTION_RIGHT;
+    if(edge & EdgeRight) ball.direction.x = DIRECTION_RIGHT;
+    else if(edge & EdgeLeft) ball.direction.x = DIRECTION_LEFT;
 }
 
 void ball_move(void) {
@@ -52,12 +52,12 @@ void ball_move(void) {
     }
 
     if((x <= SPRITE_WIDTH - BALL_OFFSET)) {
-        ball_bounce(EdgeLeft); // ball.direction.x = 1;
+        ball_bounce(EdgeRight); // ball.direction.x = 1;
         x = SPRITE_WIDTH - BALL_OFFSET;
     }
 
     if((x >= SCREEN_WIDTH + BALL_OFFSET)) {
-        ball_bounce(EdgeRight); // ball.direction.x = -1;
+        ball_bounce(EdgeLeft); // ball.direction.x = -1;
         x = SCREEN_WIDTH + BALL_OFFSET;
     }
 
