@@ -42,6 +42,10 @@ int main(void) {
 
     init();
 
+    Sound* sound = sound_play(0, 220, 0);
+    msleep(75);
+    sound_stop(sound);
+
     reset(true);
 
     load_level(0);
@@ -137,6 +141,9 @@ void init(void) {
     // uint8_t tiles[1] = { BRICK26+1 };
     // gfx_tilemap_load(&vctx, tiles, sizeof(tiles), UI_LAYER, 1, 0);
     /** /DEBUG */
+
+    sound_set(0, WAV_SAWTOOTH);
+    sound_set(1, WAV_SQUARE);
 
     gfx_enable_screen(1);
 
@@ -249,6 +256,9 @@ void update(void) {
     /** /debug */
 
     edge = player_collide(&ball.rect);
+    if(edge != EdgeNone) {
+        sound_play(0, 400, 4);
+    }
     switch(edge) {
         // uno reverse
         case EdgeLeft: ball_bounce(edge | EdgeTop); break;
@@ -311,6 +321,8 @@ void update(void) {
             sprintf(text, "ED%02d", edge);
             nprint_string(&vctx, text, 4, 0, HEIGHT - 3);
             /** /DEBUG */
+
+            sound_play(1, 220, 2);
 
             // uint8_t mod = tile.x % 2;
             // if(mod == 1) edge &= (0xFF ^ EdgeLeft);  // remove the left edge from the right tile
