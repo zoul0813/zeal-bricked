@@ -7,14 +7,15 @@
 #define BALLS_H
 
 #define BALL_SPEED  2
-#define BALL_OFFSET 4
 #define BALL_WIDTH  8
 #define BALL_HEIGHT 8
 
 typedef struct {
   uint8_t sprite_index;
   gfx_sprite sprite;
+  Edge edge;
   uint8_t speed;
+  uint8_t angle;
   Direction direction;
   Rect rect;
 } Ball;

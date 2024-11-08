@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <zvb_gfx.h>
+#include <zgdk.h>
 
 #ifndef BRICKS_H
 #define BRICKS_H
@@ -44,8 +45,17 @@ typedef struct {
   uint8_t r; // right tile
   uint8_t x;
   uint8_t y;
+  uint8_t points;
 } Brick;
 
 extern const Brick BRICKS[BRICK_COUNT];
+
+static uint16_t brick_px(uint8_t x) {
+  return (x * TILE_WIDTH) + TILE_WIDTH;
+}
+
+static uint16_t brick_py(uint8_t y) {
+  return (y * TILE_HEIGHT) + TILE_HEIGHT;
+}
 
 #endif

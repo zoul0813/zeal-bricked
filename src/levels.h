@@ -12,7 +12,6 @@
 
 typedef struct {
   uint8_t index;
-  uint8_t score; // ???
   uint8_t brick_count;
   Brick bricks[LEVEL_TILE_COUNT];
 } Level;

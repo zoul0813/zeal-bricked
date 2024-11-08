@@ -25,15 +25,16 @@ int main(void) {
     /** START */
 #ifdef DEBUG
     Tile tile;
-    Rect rect = {
-        .x = 16,
-        .y = 16,
-        .w = 8,
-        .h = 8,
-    };
-    bool found = tile_get(&rect, &tile);
-    printf("Found: %d\n", found);
-    printf("OX: %03d, OY: %03d\n", rect.x, rect.y);
+    // Rect rect = {
+    //     .x = 16,
+    //     .y = 16,
+    //     .w = 8,
+    //     .h = 8,
+    // };
+    // bool found = tile_get(&rect, &tile);
+    tile_at(0, 0, &tile);
+    // printf("Found: %d\n", found);
+    // printf("OX: %03d, OY: %03d\n", rect.x, rect.y);
     printf("TX: %03d, TY: %03d\n", tile.x, tile.y);
     printf("RX: %03d, RY: %03d\n", tile.rect.x, tile.rect.y);
     exit(2);
@@ -51,6 +52,7 @@ int main(void) {
     load_level(0);
 
 
+    uint8_t process_frame = 0;
     while(true) {
         sound_loop();
         uint8_t action = input();
@@ -61,12 +63,24 @@ int main(void) {
                 goto quit_game;
         }
 
-        frames++;
+#ifdef FRAMELOCK
+        bool force_process = controller_pressed(BUTTON_Y);
+        if(force_process || controller_pressed(BUTTON_B)) {
+            if(force_process || process_frame == 0) {
+                process_frame = 1;
+#endif
+                frames++;
 
-        TSTATE_LOG(1);
-        update();
-        TSTATE_LOG(1);
-        draw();
+                TSTATE_LOG(1);
+                update();
+                TSTATE_LOG(1);
+                draw();
+#ifdef FRAMELOCK
+            }
+        } else {
+            process_frame = 0;
+        }
+#endif
 
         if(level.brick_count == 0) {
             msleep(250);
@@ -167,8 +181,8 @@ error load_level(uint8_t which) {
 
     /** debug */
     char text[10];
-        sprintf(text, "%02d", level.index);
-        nprint_string(&vctx, text, strlen(text), WIDTH - 2, 0);
+    sprintf(text, "%02d", level.index);
+    nprint_string(&vctx, text, strlen(text), WIDTH - 2, 0);
     /** /debug */
 
     uint8_t line[LEVEL_WIDTH*2];
@@ -179,27 +193,29 @@ error load_level(uint8_t which) {
 
             uint8_t tilex = x * 2;
             Brick *brick = &level.bricks[(y * LEVEL_WIDTH) + x];
+            brick->x = tilex;
+            brick->y = y;
             if(type > 0) {
                 // memcpy(brick, &BRICKS[type-1], sizeof(Brick));
                 brick->health = BRICKS[type-1].health;
+                brick->points = brick->health;
                 brick->l = BRICKS[type-1].l;
                 brick->r = BRICKS[type-1].r;
-                brick->x = tilex;
-                brick->y = y;
                 level.brick_count++;
             } else {
                 brick->health = 0;
+                brick->points = 0;
                 brick->l = EMPTY_TILE;
                 brick->r = EMPTY_TILE;
-                brick->x = tilex;
-                brick->y = y;
             }
-            // level.tiles[(y * LEVEL_WIDTH) + x] = brick;
             line[tilex] = brick->l;
             line[tilex+1] = brick->r;
         }
         gfx_tilemap_load(&vctx, line, LEVEL_WIDTH*2, LEVEL_LAYER, 0, y);
     }
+
+    sprintf(text, "%02d", level.brick_count);
+    nprint_string(&vctx, text, strlen(text), WIDTH - 2, 1);
 
     return 0;
 }
@@ -251,22 +267,38 @@ void update(void) {
     ball_move();
 
     Edge edge = EdgeNone;
-    /** debug */
     char text[10];
-    /** /debug */
+
+    // sprintf(text, "PX%03d", player.rect.x);
+    // nprint_string(&vctx, text, 5, 0, HEIGHT - 3);
+    // sprintf(text, "PY%03d", player.rect.y);
+    // nprint_string(&vctx, text, 5, 6, HEIGHT - 3);
+    // sprintf(text, "BX%03d", ball.rect.x);
+    // nprint_string(&vctx, text, 5, 0, HEIGHT - 4);
+    // sprintf(text, "BY%03d", ball.rect.y);
+    // nprint_string(&vctx, text, 5, 6, HEIGHT - 4);
 
     edge = player_collide(&ball.rect);
     if(edge != EdgeNone) {
         sound_play(0, 400, 4);
+        switch(edge) {
+            // uno reverse
+            case EdgeLeft:
+                ball_bounce(edge | EdgeTop);
+                break;
+            case EdgeRight:
+                ball_bounce(edge | EdgeTop);
+                break;
+            case EdgeTop: // fall thru
+            case EdgeBottom:
+                ball_bounce(edge);
+                break;
+        }
+        // If collides with player, can't possibly collide with bricks ... if/else statement?
+        return;
     }
-    switch(edge) {
-        // uno reverse
-        case EdgeLeft: ball_bounce(edge | EdgeTop); break;
-        case EdgeRight: ball_bounce(edge | EdgeTop); break;
-        // as is
-        case EdgeTop: // fallthru
-        case EdgeBottom: ball_bounce(edge); break;
-    }
+
+
     // /** debug */
     // if(edge != EdgeNone) {
     //     sprintf(text, "PE%02d", edge);
@@ -308,60 +340,88 @@ void update(void) {
     // /** /debug */
 
     uint16_t brick_offset = (tile.y * LEVEL_WIDTH) + (tile.x >> 1);
-    if(brick_offset < LEVEL_TILE_COUNT) {
-        Brick *brick = &level.bricks[brick_offset];
-        // sprintf(text, "BX%03d", brick->x);
-        // nprint_string(&vctx, text, 5, 0, HEIGHT - 6);
-        // sprintf(text, "BY%03d", brick->y);
-        // nprint_string(&vctx, text, 5, 6, HEIGHT - 6);
+    if(brick_offset > LEVEL_TILE_COUNT) return;
 
-        if(brick->health > 0) {
-            brick->health--;
-            /** DEBUG */
-            sprintf(text, "ED%02d", edge);
-            nprint_string(&vctx, text, 4, 0, HEIGHT - 3);
-            /** /DEBUG */
+    Brick *brick = &level.bricks[brick_offset];
+    // sprintf(text, "BX%03d", brick->x);
+    // nprint_string(&vctx, text, 5, 0, HEIGHT - 1);
+    // sprintf(text, "BY%03d", brick->y);
+    // nprint_string(&vctx, text, 5, 6, HEIGHT - 1);
 
-            sound_play(1, 220, 2);
+    if(brick->health < 1) return;
 
-            // uint8_t mod = tile.x % 2;
-            // if(mod == 1) edge &= (0xFF ^ EdgeLeft);  // remove the left edge from the right tile
-            // else edge &= (0xFF ^ EdgeRight);         // remove the right edge from the left tile
+    sound_play(1, 220, 2);
 
-            /** DEBUG */
-            sprintf(text, "ED%02d", edge);
-            nprint_string(&vctx, text, 4, 6, HEIGHT - 3);
+    /** DEBUG */
+    // sprintf(text, "EB%02d", edge);
+    // nprint_string(&vctx, text, 4, 0, HEIGHT - 4);
+    /** /DEBUG */
 
-            // sprintf(text, "MO%01d", mod);
-            // nprint_string(&vctx, text, 4, WIDTH - 3, HEIGHT - 3);
-            /** /DEBUG */
+    uint8_t mod = tile.x % 2;
+    if(mod == 1) edge &= (0xFF ^ EdgeLeft);  // remove the left edge from the right tile
+    else edge &= (0xFF ^ EdgeRight);         // remove the right edge from the left tile
 
-            if(edge & EdgeLeft) {
-                ball.sprite.x = tile.rect.x - BALL_OFFSET - 1;
-                ball.rect.x = ball.sprite.x;
-            } else if(edge & EdgeRight) {
-                ball.sprite.x = tile.rect.x + tile.rect.w + BALL_OFFSET + 1;
-                ball.rect.x = ball.sprite.x;
-            }
+    /** DEBUG */
+    // sprintf(text, "EA%02d", edge);
+    // nprint_string(&vctx, text, 4, 0, HEIGHT - 3);
+    // sprintf(text, "MO%02d", mod);
+    // nprint_string(&vctx, text, 4, 6, HEIGHT - 3);
+    /** /DEBUG */
 
-            // if(edge == EdgeTop) {
-            //     // only top
-            //     ball.sprite.y = tile.rect.y - BALL_OFFSET + 1;
-            //     ball.rect.y = ball.sprite.y;
-            // } else if(edge == EdgeBottom) {
-            //     // only bottom
-            //     ball.sprite.y = tile.rect.y + tile.rect.h + BALL_OFFSET + 1;
-            //     ball.rect.y = ball.sprite.y;
-            // }
+    if(edge == EdgeNone) return;
 
-            ball_bounce(edge);
-            if(brick->health == 0) {
-                // remove brick
-                level.brick_count--;
-                gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x, brick->y);
-                gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x+1, brick->y);
-            }
-        }
+
+    // move the ball so it doesn't go "inside" the brick
+    if(edge & EdgeTop > 0) {
+        ball.sprite.y = (brick_py(brick->y) - TILE_HEIGHT);
+        ball.rect.y = ball.sprite.y;
+    } else if(edge & EdgeBottom > 0) {
+        ball.sprite.y = brick_py(brick->y) + BRICK_HEIGHT;
+        ball.rect.y = ball.sprite.y;
+    }
+
+    if(edge & EdgeLeft > 0) {
+        ball.sprite.x = (brick_px(brick->x) - TILE_WIDTH);
+        ball.rect.x = ball.sprite.x;
+    } else if(edge & EdgeRight > 0) {
+        ball.sprite.x = brick_px(brick->x) + BRICK_WIDTH;
+        ball.rect.x = ball.sprite.x;
+    }
+
+    // sprintf(text, "CX%03d", ball.sprite.x);
+    // nprint_string(&vctx, text, 5, 0, HEIGHT - 2);
+    // sprintf(text, "CY%03d", ball.sprite.y);
+    // nprint_string(&vctx, text, 5, 6, HEIGHT - 2);
+
+    ball_bounce(edge);
+
+    // if(edge == EdgeTop || edge == EdgeBottom) {
+    //     msleep(75);
+    //     sound_stop_all();
+    //     while(1) {}
+    // }
+
+    // sprintf(text, "MO%01d", mod);
+    // nprint_string(&vctx, text, 4, WIDTH - 3, HEIGHT - 3);
+    /** /DEBUG */
+
+    // TODO: debug, uncomment to remove bricks
+    // TODO: debug, uncomment to remove bricks
+    brick->health--;
+    if(brick->health < 1) {
+        // remove brick
+        level.brick_count--;
+        player.score += brick->points; // TODO: point modifier???
+        sprintf(text, "%03d", player.score);
+        nprint_string(&vctx, text, strlen(text), 0, 0);
+
+        /** DEBUG */
+        sprintf(text, "%02d", level.brick_count);
+        nprint_string(&vctx, text, strlen(text), WIDTH - 2, 1);
+        /** /DEBUG */
+
+        gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x, brick->y);
+        gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x+1, brick->y);
     }
 }
 
