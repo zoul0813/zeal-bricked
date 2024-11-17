@@ -5,6 +5,7 @@
 #include <zos_video.h>
 #include <zos_errors.h>
 #include <zvb_gfx.h>
+#include <zvb_hardware.h>
 #include <zgdk.h>
 
 #include "assets.h"
@@ -21,22 +22,61 @@ Level level;
 
 uint16_t frames = 0;
 
+// #define BREAK
+// #define DEBUG
+// #define FRAMELOCK
+#ifdef DEBUG
+uint8_t DEBUG_TILE_INDEX = 100;
+gfx_sprite DEBUG_TILE;
+#endif
+
 int main(void) {
     /** START */
-#ifdef DEBUG
+#ifdef BREAK
     Tile tile;
-    // Rect rect = {
-    //     .x = 16,
-    //     .y = 16,
-    //     .w = 8,
-    //     .h = 8,
-    // };
-    // bool found = tile_get(&rect, &tile);
-    tile_at(0, 0, &tile);
-    // printf("Found: %d\n", found);
-    // printf("OX: %03d, OY: %03d\n", rect.x, rect.y);
+    Rect rect = {
+        .x = 66,
+        .y = 100,
+        .w = 8,
+        .h = 8,
+    };
+    printf("Ball:\n");
+    printf("RX: %03d, RY: %03d\n", rect.x, rect.y);
+    printf("RW: %03d, RH: %03d\n", rect.w, rect.h);
+    printf("\n");
+
+    Direction direction = {
+        .x = 1,
+        .y = 1,
+    };
+    Edge edge = tile_collide(&rect, &direction, &tile);
+    // printf("Edge: %02d, T: %d, R: %d, B: %d, L: %d\n", edge, edge & EdgeTop > 0, edge & EdgeRight > 0, edge & EdgeBottom > 0, edge & EdgeLeft > 0);
+    printf("Edge: %02d (%d %d %d %d)", edge, edge & EdgeTop, edge & EdgeRight, edge & EdgeBottom, edge & EdgeLeft);
+    if((edge & EdgeTop) > 0) printf(" T: 1");
+    if((edge & EdgeRight) > 0) printf(" R: 1");
+    if((edge & EdgeBottom) > 0) printf(" B: 1");
+    if((edge & EdgeLeft) > 0) printf(" L: 1");
+    printf("\n");
+
     printf("TX: %03d, TY: %03d\n", tile.x, tile.y);
     printf("RX: %03d, RY: %03d\n", tile.rect.x, tile.rect.y);
+    printf("RW: %03d, RH: %03d\n", tile.rect.w, tile.rect.h);
+    printf("\n");
+
+    uint16_t t = rect_top(&tile.rect);
+    uint16_t r = rect_right(&tile.rect);
+    uint16_t b = rect_bottom(&tile.rect);
+    uint16_t l = rect_left(&tile.rect);
+    printf("TILE T: %03d, R: %03d, B: %03d, L: %03d\n", t, r, b, l);
+
+    t = rect_top(&rect);
+    r = rect_right(&rect);
+    b = rect_bottom(&rect);
+    l = rect_left(&rect);
+    printf("BALL T: %03d, R: %03d, B: %03d, L: %03d\n", t, r, b, l);
+
+
+    printf("\n\n");
     exit(2);
 #endif
     /** END */
@@ -140,21 +180,16 @@ void init(void) {
     err = load_tiles(&vctx, &options);
     if (err) exit(1);
 
+#ifdef DEBUG
+    DEBUG_TILE.tile = 79;
+    DEBUG_TILE.x = SCREEN_HEIGHT / 2;
+    DEBUG_TILE.y = SCREEN_WIDTH / 2;
+#endif
+
     ascii_map(' ', 1, EMPTY_TILE); // space
     ascii_map(',', 16, 160); // numbers and extras
     ascii_map('A', 26, 176); // A-Z to a-z
     ascii_map('a', 28, 176); // a-z + snes icon
-
-    /** DEBUG */
-    // gfx_sprite debug_tile = {
-    //     .tile = BRICK25,
-    //     .x = 16,
-    //     .y = 16,
-    // };
-    // gfx_sprite_render(&vctx, 96, &debug_tile);
-    // uint8_t tiles[1] = { BRICK26+1 };
-    // gfx_tilemap_load(&vctx, tiles, sizeof(tiles), UI_LAYER, 1, 0);
-    /** /DEBUG */
 
     sound_set(0, WAV_SAWTOOTH);
     sound_set(1, WAV_SQUARE);
@@ -273,10 +308,16 @@ void update(void) {
     // nprint_string(&vctx, text, 5, 0, HEIGHT - 3);
     // sprintf(text, "PY%03d", player.rect.y);
     // nprint_string(&vctx, text, 5, 6, HEIGHT - 3);
-    // sprintf(text, "BX%03d", ball.rect.x);
-    // nprint_string(&vctx, text, 5, 0, HEIGHT - 4);
-    // sprintf(text, "BY%03d", ball.rect.y);
-    // nprint_string(&vctx, text, 5, 6, HEIGHT - 4);
+#ifdef DEBUG
+    sprintf(text, "W%03d", ball.rect.w);
+    nprint_string(&vctx, text, 5, 0, HEIGHT - 3);
+    sprintf(text, "H%03d", ball.rect.h);
+    nprint_string(&vctx, text, 5, 5, HEIGHT - 3);
+    sprintf(text, "X%03d", ball.rect.x);
+    nprint_string(&vctx, text, 5, 0, HEIGHT - 4);
+    sprintf(text, "Y%03d", ball.rect.y);
+    nprint_string(&vctx, text, 5, 5, HEIGHT - 4);
+#endif
 
     edge = player_collide(&ball.rect);
     if(edge != EdgeNone) {
@@ -312,16 +353,22 @@ void update(void) {
     // tile.rect.w = BRICK_WIDTH;
     edge = tile_collide(&ball.rect, &ball.direction, &tile);
 
-    /** debug */
-    // sprintf(text, "%03d", ball.sprite.x);
-    // nprint_string(&vctx, text, strlen(text), WIDTH - 7, HEIGHT - 2);
-    // sprintf(text, "%03d", ball.sprite.y);
-    // nprint_string(&vctx, text, strlen(text), WIDTH - 3, HEIGHT - 2);
+#ifdef DEBUG
+    DEBUG_TILE.x = tile.rect.x;
+    DEBUG_TILE.y = tile.rect.y;
+#endif
 
-    // sprintf(text, "%02d", player.direction.x);
-    // nprint_string(&vctx, text, strlen(text), WIDTH - 6, HEIGHT - 3);
-    // sprintf(text, "%02d", player.width);
-    // nprint_string(&vctx, text, strlen(text), WIDTH - 2, HEIGHT - 3);
+    /** debug */
+#ifdef DEBUG
+    sprintf(text, "W%03d", tile.rect.w);
+    nprint_string(&vctx, text, strlen(text), WIDTH - 9, HEIGHT - 3);
+    sprintf(text, "H%03d", tile.rect.h);
+    nprint_string(&vctx, text, strlen(text), WIDTH - 4, HEIGHT - 3);
+    sprintf(text, "X%03d", tile.rect.x);
+    nprint_string(&vctx, text, strlen(text), WIDTH - 9, HEIGHT - 4);
+    sprintf(text, "Y%03d", tile.rect.y);
+    nprint_string(&vctx, text, strlen(text), WIDTH - 4, HEIGHT - 4);
+#endif
     /** /debug */
 
     // /** debug */
@@ -353,8 +400,10 @@ void update(void) {
     sound_play(1, 220, 2);
 
     /** DEBUG */
-    // sprintf(text, "EB%02d", edge);
-    // nprint_string(&vctx, text, 4, 0, HEIGHT - 4);
+#ifdef DEBUG
+    sprintf(text, "EB%02d", edge);
+    nprint_string(&vctx, text, 4, 0, HEIGHT - 5);
+#endif
     /** /DEBUG */
 
     uint8_t mod = tile.x % 2;
@@ -362,8 +411,10 @@ void update(void) {
     else edge &= (0xFF ^ EdgeRight);         // remove the right edge from the left tile
 
     /** DEBUG */
-    // sprintf(text, "EA%02d", edge);
-    // nprint_string(&vctx, text, 4, 0, HEIGHT - 3);
+#ifdef DEBUG
+    sprintf(text, "EA%02d", edge);
+    nprint_string(&vctx, text, 4, 0, HEIGHT - 6);
+#endif
     // sprintf(text, "MO%02d", mod);
     // nprint_string(&vctx, text, 4, 6, HEIGHT - 3);
     /** /DEBUG */
@@ -372,20 +423,22 @@ void update(void) {
 
 
     // move the ball so it doesn't go "inside" the brick
-    if(edge & EdgeTop > 0) {
-        ball.sprite.y = (brick_py(brick->y) - TILE_HEIGHT);
-        ball.rect.y = ball.sprite.y;
-    } else if(edge & EdgeBottom > 0) {
-        ball.sprite.y = brick_py(brick->y) + BRICK_HEIGHT;
-        ball.rect.y = ball.sprite.y;
+    if((edge & EdgeTop) > 0) {
+        ball.rect.y = rect_top(&tile.rect) - 1;
+        ball.sprite.y = ball.rect.y;
     }
-
-    if(edge & EdgeLeft > 0) {
-        ball.sprite.x = (brick_px(brick->x) - TILE_WIDTH);
-        ball.rect.x = ball.sprite.x;
-    } else if(edge & EdgeRight > 0) {
-        ball.sprite.x = brick_px(brick->x) + BRICK_WIDTH;
-        ball.rect.x = ball.sprite.x;
+    else if((edge & EdgeBottom) > 0) {
+        ball.sprite.y = rect_bottom(&tile.rect) + ball.rect.h + 1;
+         ball.sprite.y = ball.sprite.y;
+    }
+    // else
+    if((edge & EdgeRight) > 0) {
+        ball.rect.x = rect_right(&tile.rect) + ball.rect.w + 1;
+        ball.sprite.x = ball.rect.x;
+    }
+    else if((edge & EdgeLeft) > 0) {
+        ball.rect.x = rect_left(&tile.rect) - 1;
+        ball.sprite.x = ball.rect.x;
     }
 
     // sprintf(text, "CX%03d", ball.sprite.x);
@@ -429,6 +482,11 @@ void draw(void) {
     gfx_wait_vblank(&vctx);
     player_draw();
     ball_draw();
+
+#ifdef DEBUG
+    gfx_sprite_render(&vctx, DEBUG_TILE_INDEX, &DEBUG_TILE);
+#endif
+
     gfx_wait_end_vblank(&vctx);
 }
 
