@@ -24,7 +24,7 @@ typedef uint8_t error;
 
 void init(void);
 void deinit(void);
-void reset(uint8_t player_reset);
+void reset(void);
 uint8_t input(void);
 error load_level(uint8_t which);
 

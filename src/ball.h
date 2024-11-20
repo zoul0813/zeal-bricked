@@ -15,14 +15,14 @@ typedef struct {
   gfx_sprite sprite;
   Edge edge;
   uint8_t speed;
-  uint8_t angle;
   Direction direction;
   Rect rect;
 } Ball;
 
 extern Ball ball;
 
-zos_err_t ball_init(uint8_t reset);
+zos_err_t ball_init(void);
+void ball_reset(void);
 void ball_bounce(Edge edge);
 void ball_move(void);
 void ball_draw(void);

@@ -34,7 +34,8 @@ extern Player player;
 
 void player_set_x(uint16_t x);
 void player_set_width(uint8_t width);
-zos_err_t player_init(uint8_t player_reset);
+zos_err_t player_init(void);
+void player_reset(void);
 void player_move(void);
 Edge player_collide(Rect *rect);
 void player_draw(void);

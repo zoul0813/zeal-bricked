@@ -5,24 +5,29 @@
 
 Ball ball;
 
-zos_err_t ball_init(uint8_t reset) {
-    (void *)reset;
+zos_err_t ball_init(void) {
     zos_err_t err;
     ball.sprite.tile = 1;
+    ball.rect.w = BALL_WIDTH;
+    ball.rect.h = BALL_HEIGHT;
+    ball.sprite_index = PLAYER_MAX_WIDTH + 2;
+
+    err = gfx_sprite_render(&vctx, ball.sprite_index, &ball.sprite);
+    if(err) return ERR_FAILURE; // err;
+
+    ball_reset();
+
+    return ERR_SUCCESS;
+}
+
+void ball_reset(void) {
     ball.sprite.x = (SCREEN_WIDTH / 2) - SPRITE_WIDTH;
     ball.sprite.y = SCREEN_HEIGHT - (SPRITE_HEIGHT * 5);
     ball.rect.x = ball.sprite.x;
     ball.rect.y = ball.sprite.y;
-    ball.rect.w = BALL_WIDTH;
-    ball.rect.h = BALL_HEIGHT;
     ball.direction.x = DIRECTION_RIGHT;
     ball.direction.y = DIRECTION_UP;
     ball.speed = BALL_SPEED;
-    ball.sprite_index = PLAYER_MAX_WIDTH + 2;
-    err = gfx_sprite_render(&vctx, ball.sprite_index, &ball.sprite);
-    if(err) return ERR_FAILURE; // err;
-
-    return ERR_SUCCESS;
 }
 
 void ball_bounce(Edge edge) {
@@ -65,10 +70,11 @@ void ball_move(void) {
         ball_bounce(EdgeBottom); //ball.direction.y = 1;
         y = SPRITE_HEIGHT - (SPRITE_HEIGHT - BALL_HEIGHT);
     }
-    if((y >= SCREEN_HEIGHT)) {
-        ball_bounce(EdgeTop); //ball.direction.y = -1;
-        y = SCREEN_HEIGHT;
-    }
+
+    // if((y >= SCREEN_HEIGHT)) {
+    //     ball_bounce(EdgeTop); //ball.direction.y = -1;
+    //     y = SCREEN_HEIGHT;
+    // }
 
     if((x <= SPRITE_WIDTH - (SPRITE_WIDTH - BALL_WIDTH))) {
         ball_bounce(EdgeRight); // ball.direction.x = 1;

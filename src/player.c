@@ -38,40 +38,43 @@ void player_set_width(uint8_t width) {
     player_set_x(player.rect.x);
 }
 
-zos_err_t player_init(uint8_t player_reset) {
+zos_err_t player_init(void) {
     zos_err_t err;
-    player.speed = PLAYER_SPEED;
     player.rect.h = SPRITE_HEIGHT;
 
-    if(player_reset) {
-        uint8_t sprite_index = 0;
-        player.sprite_index = sprite_index;
+    uint8_t sprite_index = 0;
+    player.sprite_index = sprite_index;
 
-        player.spritel.tile = PADDLE1;
-        player.spritel.y = PLAYER_Y;
-        player.rect.y = PLAYER_Y;
-        err = gfx_sprite_render(&vctx, sprite_index, &player.spritel);
-        if(err) return err;
+    player.spritel.tile = PADDLE1;
+    player.spritel.y = PLAYER_Y;
+    player.rect.y = PLAYER_Y;
+    err = gfx_sprite_render(&vctx, sprite_index, &player.spritel);
+    if(err) return err;
 
-        player.width = 1;
-        for(uint8_t i = 0; i < PLAYER_MAX_WIDTH; i++) {
-            player.spritem[i].tile = PADDLE1+1;
-            sprite_index++;
-            err = gfx_sprite_render(&vctx, sprite_index, &player.spritem[i]);
-            if(err) return err;
-        }
-
-        player.spriter.tile = PADDLE1+2;
-        player.spriter.y = player.spritel.y;
+    player.width = 1;
+    for(uint8_t i = 0; i < PLAYER_MAX_WIDTH; i++) {
+        player.spritem[i].tile = PADDLE1+1;
+        player.spritem[i].y = PLAYER_Y;
         sprite_index++;
-        err = gfx_sprite_render(&vctx, sprite_index, &player.spriter);
+        err = gfx_sprite_render(&vctx, sprite_index, &player.spritem[i]);
         if(err) return err;
     }
 
-    player_set_width(player.width);
-    player_set_x((SCREEN_WIDTH / 2) - SPRITE_WIDTH);
+    player.spriter.tile = PADDLE1+2;
+    player.spriter.y = PLAYER_Y;
+    sprite_index++;
+    err = gfx_sprite_render(&vctx, sprite_index, &player.spriter);
+    if(err) return err;
+
+    player_reset();
 
     return ERR_SUCCESS;
+}
+
+void player_reset(void) {
+    player.speed = PLAYER_SPEED;
+    player_set_width(player.width);
+    player_set_x((SCREEN_WIDTH / 2) - SPRITE_WIDTH);
 }
 
 void player_move(void) {

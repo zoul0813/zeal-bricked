@@ -7,8 +7,18 @@
   "${env:ZGDK_PATH}/include",
 ],
 "files.associations": {
+  "*.asm": "z80-macroasm",
   "stdint.h": "c",
   "string.h": "c",
-  "memory_resource": "c"
+  "memory_resource": "c",
+  "__hash_table": "c",
+  "bitset": "c",
+  "memory": "c",
+  "locale": "c",
+  "optional": "c",
+  "ostream": "c",
+  "random": "c",
+  "istream": "c",
+  "mutex": "c"
 },
 }
