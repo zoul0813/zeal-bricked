@@ -22,6 +22,7 @@ Level level;
 
 uint16_t frames = 0;
 static uint8_t paused = 0;
+static uint8_t launched = 0;
 
 // #define BREAK
 // #define DEBUG
@@ -72,7 +73,7 @@ reset:
 
 #ifdef FRAMELOCK
         bool force_process = controller_pressed(BUTTON_Y);
-        if(force_process || controller_pressed(BUTTON_B)) {
+        if(force_process || controller_pressed(BUTTON_X)) {
             if(force_process || process_frame == 0) {
                 process_frame = 1;
 #endif
@@ -189,6 +190,7 @@ void reset(void) {
 
 error load_level(uint8_t which) {
     level.index = which + 1;
+    launched = 0;
 
     which %= LEVEL_COUNT;
 
@@ -268,6 +270,7 @@ uint8_t input(void) {
     if((input & BUTTON_RIGHT)) player.direction.x = DIRECTION_RIGHT;
     if((input & BUTTON_START)) return ACTION_PAUSE;
     if((input & BUTTON_SELECT)) return ACTION_QUIT;
+    if((input & BUTTON_B)) launched = 1;
 
 
     // /**** TESTING ****/
@@ -280,12 +283,14 @@ uint8_t input(void) {
 
 void update(void) {
     player_move();
-    ball_move();
+    if(launched) ball_move();
+    else return;
 
     uint16_t ball_top = rect_top(&ball.rect);
     if(ball_top > SCREEN_HEIGHT + SPRITE_HEIGHT) {
         sound_play(1, 294, 3);
         player.lives--;
+        launched = 0;
         msleep(750);
         ball_reset();
         return;
