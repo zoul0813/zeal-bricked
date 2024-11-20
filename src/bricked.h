@@ -29,6 +29,8 @@ uint8_t input(void);
 error load_level(uint8_t which);
 
 void update(void);
+void draw_paused(uint8_t paused);
+void draw_gameover(uint8_t gameover);
 void draw(void);
 
 extern gfx_context vctx;

@@ -41,6 +41,7 @@ void player_set_width(uint8_t width) {
 zos_err_t player_init(void) {
     zos_err_t err;
     player.rect.h = SPRITE_HEIGHT;
+    player.lives = PLAYER_LIVES;
 
     uint8_t sprite_index = 0;
     player.sprite_index = sprite_index;

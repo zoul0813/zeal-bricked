@@ -89,6 +89,8 @@ ifndef ZGDK_PATH
     $(error "Failure: ZGDK_PATH variable not found. It must point to ZGDK path.")
 endif
 
+GFX_STRIP = 48
+
 include $(ZGDK_PATH)/base_sdcc.mk
 
 ## Add your own rules here

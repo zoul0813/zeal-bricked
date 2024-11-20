@@ -21,6 +21,7 @@ static uint8_t controller_mode = 1;
 Level level;
 
 uint16_t frames = 0;
+static uint8_t paused = 0;
 
 // #define BREAK
 // #define DEBUG
@@ -31,77 +32,43 @@ gfx_sprite DEBUG_TILE;
 #endif
 
 int main(void) {
-    /** START */
-#ifdef BREAK
-    Tile tile;
-    Rect rect = {
-        .x = 66,
-        .y = 100,
-        .w = 8,
-        .h = 8,
-    };
-    printf("Ball:\n");
-    printf("RX: %03d, RY: %03d\n", rect.x, rect.y);
-    printf("RW: %03d, RH: %03d\n", rect.w, rect.h);
-    printf("\n");
-
-    Direction direction = {
-        .x = 1,
-        .y = 1,
-    };
-    Edge edge = tile_collide(&rect, &direction, &tile);
-    // printf("Edge: %02d, T: %d, R: %d, B: %d, L: %d\n", edge, edge & EdgeTop > 0, edge & EdgeRight > 0, edge & EdgeBottom > 0, edge & EdgeLeft > 0);
-    printf("Edge: %02d (%d %d %d %d)", edge, edge & EdgeTop, edge & EdgeRight, edge & EdgeBottom, edge & EdgeLeft);
-    if((edge & EdgeTop) > 0) printf(" T: 1");
-    if((edge & EdgeRight) > 0) printf(" R: 1");
-    if((edge & EdgeBottom) > 0) printf(" B: 1");
-    if((edge & EdgeLeft) > 0) printf(" L: 1");
-    printf("\n");
-
-    printf("TX: %03d, TY: %03d\n", tile.x, tile.y);
-    printf("RX: %03d, RY: %03d\n", tile.rect.x, tile.rect.y);
-    printf("RW: %03d, RH: %03d\n", tile.rect.w, tile.rect.h);
-    printf("\n");
-
-    uint16_t t = rect_top(&tile.rect);
-    uint16_t r = rect_right(&tile.rect);
-    uint16_t b = rect_bottom(&tile.rect);
-    uint16_t l = rect_left(&tile.rect);
-    printf("TILE T: %03d, R: %03d, B: %03d, L: %03d\n", t, r, b, l);
-
-    t = rect_top(&rect);
-    r = rect_right(&rect);
-    b = rect_bottom(&rect);
-    l = rect_left(&rect);
-    printf("BALL T: %03d, R: %03d, B: %03d, L: %03d\n", t, r, b, l);
-
-
-    printf("\n\n");
-    exit(2);
-#endif
-    /** END */
-
     init();
+reset:
+    player.lives = PLAYER_LIVES;
+    draw_gameover(false);
+    reset();
 
     Sound* sound = sound_play(0, 220, 0);
     msleep(75);
     sound_stop(sound);
 
-    // reset();
-
     load_level(0);
-
 
     uint8_t process_frame = 0;
     while(true) {
         sound_loop();
         uint8_t action = input();
         switch(action) {
+            case ACTION_NONE:
+                // debounce the pause button
+                if(paused == 1) {
+                    paused = 2; // released pause
+                    draw_paused(true);
+                }
+                if(paused == 3) {
+                    paused = 0; // released unpause
+                    draw_paused(false);
+                }
+                break;
             case ACTION_PAUSE:
+                if(paused == 0) paused = 1; // requested pause
+                if(paused == 2) paused = 3; // requested unpause
                 break;
             case ACTION_QUIT:
                 goto quit_game;
         }
+
+        if(paused > 0) continue;
 
 #ifdef FRAMELOCK
         bool force_process = controller_pressed(BUTTON_Y);
@@ -123,10 +90,20 @@ int main(void) {
 #endif
 
         if(level.brick_count == 0) {
+            msleep(10);
+            sound_stop_all();
             msleep(250);
             reset();
             load_level(level.index);
             msleep(250);
+        }
+
+        if(player.lives < 1) {
+            msleep(10);
+            sound_stop_all();
+            draw_gameover(true);
+            msleep(1000);
+            goto reset;
         }
     }
 
@@ -199,9 +176,6 @@ void init(void) {
 
     err = ball_init();
     if(err) exit(1);
-
-    player_reset();
-    ball_reset();
 
     gfx_enable_screen(1);
 
@@ -290,16 +264,16 @@ uint8_t input(void) {
 
 
     player.direction.x = DIRECTION_NONE; // not moving
-    if(input & BUTTON_LEFT) player.direction.x = DIRECTION_LEFT;
-    if(input & BUTTON_RIGHT) player.direction.x = DIRECTION_RIGHT;
-    if(input & BUTTON_START ) return ACTION_PAUSE;
-    if(input & (BUTTON_START | BUTTON_SELECT) ) return ACTION_QUIT;
+    if((input & BUTTON_LEFT)) player.direction.x = DIRECTION_LEFT;
+    if((input & BUTTON_RIGHT)) player.direction.x = DIRECTION_RIGHT;
+    if((input & BUTTON_START)) return ACTION_PAUSE;
+    if((input & BUTTON_SELECT)) return ACTION_QUIT;
 
 
-    /**** TESTING ****/
-    if(input & BUTTON_UP && player.width < PLAYER_MAX_WIDTH) player_set_width(player.width+1);
-    if(input & BUTTON_DOWN && player.width > 1) player_set_width(player.width-1);
-    /**** TESTING ****/
+    // /**** TESTING ****/
+    // if(input & BUTTON_UP && player.width < PLAYER_MAX_WIDTH) player_set_width(player.width+1);
+    // if(input & BUTTON_DOWN && player.width > 1) player_set_width(player.width-1);
+    // /**** TESTING ****/
 
     return 0;
 }
@@ -311,6 +285,7 @@ void update(void) {
     uint16_t ball_top = rect_top(&ball.rect);
     if(ball_top > SCREEN_HEIGHT + SPRITE_HEIGHT) {
         sound_play(1, 294, 3);
+        player.lives--;
         msleep(750);
         ball_reset();
         return;
@@ -319,10 +294,6 @@ void update(void) {
     Edge edge = EdgeNone;
     char text[10];
 
-    // sprintf(text, "PX%03d", player.rect.x);
-    // nprint_string(&vctx, text, 5, 0, HEIGHT - 3);
-    // sprintf(text, "PY%03d", player.rect.y);
-    // nprint_string(&vctx, text, 5, 6, HEIGHT - 3);
 #ifdef DEBUG
     sprintf(text, "W%03d", ball.rect.w);
     nprint_string(&vctx, text, 5, 0, HEIGHT - 3);
@@ -353,14 +324,6 @@ void update(void) {
         // If collides with player, can't possibly collide with bricks ... if/else statement?
         return;
     }
-
-
-    // /** debug */
-    // if(edge != EdgeNone) {
-    //     sprintf(text, "PE%02d", edge);
-    //     nprint_string(&vctx, text, strlen(text), WIDTH - 4, HEIGHT - 4);
-    // }
-    // /** /debug */
 
     // get the balls current tile coords
     Tile tile;
@@ -436,8 +399,6 @@ void update(void) {
 
     ball_bounce(edge);
 
-    // TODO: debug, uncomment to remove bricks
-    // TODO: debug, uncomment to remove bricks
     brick->health--;
     if(brick->health < 1) {
         // remove brick
@@ -463,3 +424,16 @@ void draw(void) {
     gfx_wait_end_vblank(&vctx);
 }
 
+void draw_paused(uint8_t paused) {
+    char text[6];
+    if(paused) sprintf(text, "PAUSED");
+    else sprintf(text, "      ");
+    nprint_string(&vctx, text, 6, WIDTH / 2 - 3, HEIGHT / 2);
+}
+
+void draw_gameover(uint8_t gameover) {
+    char text[10];
+    if(gameover) sprintf(text, "GAME  OVER");
+    else sprintf(text, "          ");
+    nprint_string(&vctx, text, 10, WIDTH / 2 - 5, HEIGHT / 2);
+}

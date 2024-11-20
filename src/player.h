@@ -9,6 +9,7 @@
 #define PLAYER_SPEED        3
 #define PLAYER_Y            (SCREEN_HEIGHT - (SPRITE_HEIGHT / 2))
 #define PLAYER_MAX_WIDTH    3
+#define PLAYER_LIVES        3
 
 typedef struct {
     uint8_t sprite_index;
@@ -19,6 +20,7 @@ typedef struct {
     uint8_t width; // width of middle segments
     uint8_t speed;
     uint8_t score;
+    uint8_t lives;
     Direction direction;
 } Player;
 
