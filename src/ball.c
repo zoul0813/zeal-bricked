@@ -40,7 +40,12 @@ void ball_bounce(Edge edge) {
     ball.edge = edge;
 }
 
-void ball_move(void) {
+void ball_nudge(int8_t direction) {
+    ball.sprite.x += direction * 2;
+    ball.rect.x = ball.sprite.x;
+}
+
+Edge ball_move(void) {
 
     uint16_t x = ball.sprite.x;
     uint16_t y = ball.sprite.y;
@@ -66,9 +71,12 @@ void ball_move(void) {
     // x += ball.direction.x * ball.speed;
     // y += ball.direction.y * ball.speed;
 
+    Edge edge = EdgeNone;
+
     if((y <= SPRITE_HEIGHT - (SPRITE_HEIGHT - BALL_HEIGHT))) {
         ball_bounce(EdgeBottom); //ball.direction.y = 1;
         y = SPRITE_HEIGHT - (SPRITE_HEIGHT - BALL_HEIGHT);
+        edge = EdgeTop;
     }
 
     // if((y >= SCREEN_HEIGHT)) {
@@ -79,17 +87,21 @@ void ball_move(void) {
     if((x <= SPRITE_WIDTH - (SPRITE_WIDTH - BALL_WIDTH))) {
         ball_bounce(EdgeRight); // ball.direction.x = 1;
         x = SPRITE_WIDTH - (SPRITE_WIDTH - BALL_WIDTH);
+        edge = EdgeLeft;
     }
 
     if((x >= SCREEN_WIDTH)) {
         ball_bounce(EdgeLeft); // ball.direction.x = -1;
         x = SCREEN_WIDTH;
+        edge = EdgeRight;
     }
 
     ball.sprite.x = x;
     ball.sprite.y = y;
     ball.rect.x = x;
     ball.rect.y = y;
+
+    return edge;
 }
 
 void ball_draw(void) {

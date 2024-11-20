@@ -23,6 +23,7 @@ Level level;
 uint16_t frames = 0;
 static uint8_t paused = 0;
 static uint8_t launched = 0;
+static uint8_t nudge = 0; // nudge counter
 
 // #define BREAK
 // #define DEBUG
@@ -283,8 +284,16 @@ uint8_t input(void) {
 
 void update(void) {
     player_move();
-    if(launched) ball_move();
-    else return;
+    Edge edge = EdgeNone;
+    if(launched) {
+        edge = ball_move();
+        if((edge & EdgeTop)) {
+            nudge++;
+            if(nudge > 2) {
+                ball_nudge(ball.direction.x);
+            }
+        }
+    } else return;
 
     uint16_t ball_top = rect_top(&ball.rect);
     if(ball_top > SCREEN_HEIGHT + SPRITE_HEIGHT) {
@@ -296,7 +305,7 @@ void update(void) {
         return;
     }
 
-    Edge edge = EdgeNone;
+    edge = EdgeNone;
     char text[10];
 
 #ifdef DEBUG
@@ -405,6 +414,7 @@ void update(void) {
     ball_bounce(edge);
 
     brick->health--;
+    nudge = 0;
     if(brick->health < 1) {
         // remove brick
         level.brick_count--;

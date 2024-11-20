@@ -24,7 +24,8 @@ extern Ball ball;
 zos_err_t ball_init(void);
 void ball_reset(void);
 void ball_bounce(Edge edge);
-void ball_move(void);
+void ball_nudge(int8_t direction);
+Edge ball_move(void);
 void ball_draw(void);
 
 #endif
