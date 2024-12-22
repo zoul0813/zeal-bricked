@@ -1,29 +1,54 @@
 #include <stdio.h>
 #include <string.h>
+#include <zos_errors.h>
 #include <zos_sys.h>
 #include <zos_vfs.h>
 #include <zos_video.h>
-#include <zos_errors.h>
 #include <zvb_gfx.h>
 #include <zvb_hardware.h>
+
+#define MAX_RECORDS 2048
+
 #include <zgdk.h>
 
 #include "assets.h"
-#include "bricked.h"
-
 #include "ball.h"
-#include "player.h"
+#include "bricked.h"
 #include "bricks.h"
 #include "levels.h"
+#include "player.h"
 
 gfx_context vctx;
 static uint8_t controller_mode = 1;
-Level level;
+static Level level;
 
-uint16_t frames = 0;
-static uint8_t paused = 0;
+// static uint16_t frames = 0;
+static uint8_t paused   = 0;
 static uint8_t launched = 0;
-static uint8_t nudge = 0; // nudge counter
+static uint8_t nudge    = 0; // nudge counter
+// static Track track;
+pattern_t pattern0;
+pattern_t pattern1;
+pattern_t pattern2;
+pattern_t pattern3;
+pattern_t pattern4;
+pattern_t pattern5;
+pattern_t pattern6;
+pattern_t pattern7;
+track_t track = {
+    .title    = "Track 1",
+    .patterns = {
+                 &pattern0,
+                 &pattern1,
+                 &pattern2,
+                 &pattern3,
+                 &pattern4,
+                 &pattern5,
+                 &pattern6,
+                 &pattern7,
+                 }
+};
+const size_t TRACK_SIZE = sizeof(track);
 
 // #define BREAK
 // #define DEBUG
@@ -33,52 +58,70 @@ uint8_t DEBUG_TILE_INDEX = 100;
 gfx_sprite DEBUG_TILE;
 #endif
 
-int main(void) {
+void on_error(zos_err_t err)
+{
+    deinit();
+    printf("\nError: %d (%02x)", err, err);
+    exit(err);
+}
+
+int main(void)
+{
     init();
 reset:
     player.lives = PLAYER_LIVES;
     draw_gameover(false);
     reset();
 
-    Sound* sound = sound_play(0, 220, 0);
+    Sound* sound = sound_play(VOICE3, 220, 0);
     msleep(75);
     sound_stop(sound);
 
     load_level(0);
 
     uint8_t process_frame = 0;
-    while(true) {
+    // music_transport(T_PLAY, 0);
+
+    while (true) {
         sound_loop();
+        // if(music_state() != T_PLAY) music_transport(T_PLAY, 0);
+        // music_loop(1);
+        if (!paused)
+            zmt_tick(&track, 1);
         uint8_t action = input();
-        switch(action) {
+        switch (action) {
             case ACTION_NONE:
                 // debounce the pause button
-                if(paused == 1) {
+                if (paused == 1) {
                     paused = 2; // released pause
                     draw_paused(true);
                 }
-                if(paused == 3) {
+                if (paused == 3) {
                     paused = 0; // released unpause
                     draw_paused(false);
                 }
                 break;
             case ACTION_PAUSE:
-                if(paused == 0) paused = 1; // requested pause
-                if(paused == 2) paused = 3; // requested unpause
+                if (paused == 0) {
+                    paused = 1; // requested pause
+                    zmt_sound_off();
+                }
+                if (paused == 2)
+                    paused = 3; // requested unpause
                 break;
-            case ACTION_QUIT:
-                goto quit_game;
+            case ACTION_QUIT: goto quit_game;
         }
 
-        if(paused > 0) continue;
+        if (paused > 0)
+            continue;
 
 #ifdef FRAMELOCK
         bool force_process = controller_pressed(BUTTON_Y);
-        if(force_process || controller_pressed(BUTTON_X)) {
-            if(force_process || process_frame == 0) {
+        if (force_process || controller_pressed(BUTTON_X)) {
+            if (force_process || process_frame == 0) {
                 process_frame = 1;
 #endif
-                frames++;
+                // frames++;
 
                 TSTATE_LOG(1);
                 update();
@@ -91,7 +134,7 @@ reset:
         }
 #endif
 
-        if(level.brick_count == 0) {
+        if (level.brick_count == 0) {
             msleep(10);
             sound_stop_all();
             msleep(250);
@@ -100,7 +143,7 @@ reset:
             msleep(250);
         }
 
-        if(player.lives < 1) {
+        if (player.lives < 1) {
             msleep(10);
             sound_stop_all();
             draw_gameover(true);
@@ -115,31 +158,33 @@ quit_game:
     return 0;
 }
 
-void init(void) {
+void init(void)
+{
     zos_err_t err;
+
     err = keyboard_init();
-    if(err != ERR_SUCCESS) {
-        printf("Failed to init keyboard: %d\n", err);
-        exit(1);
+    if (err != ERR_SUCCESS) {
+        printf("Failed to init keyboard: %d", err);
+        on_error(err);
     }
     err = keyboard_flush();
-    if(err != ERR_SUCCESS) {
-        printf("Failed to flush keyboard: %d\n", err);
-        exit(1);
+    if (err != ERR_SUCCESS) {
+        printf("Failed to flush keyboard: %d", err);
+        on_error(err);
     }
 
     err = controller_init();
-    if(err != ERR_SUCCESS) {
+    if (err != ERR_SUCCESS) {
         printf("Failed to init controller: %d", err);
     }
     err = controller_flush();
-    if(err != ERR_SUCCESS) {
+    if (err != ERR_SUCCESS) {
         printf("Failed to flush controller: %d", err);
     }
     // verify the controller is actually connected
     uint16_t test = controller_read();
     // if unconnected, we'll get back 0xFFFF (all buttons pressed)
-    if(test & 0xFFFF) {
+    if (test & 0xFFFF) {
         controller_mode = 0;
     }
 
@@ -147,54 +192,64 @@ void init(void) {
     gfx_enable_screen(0);
 
     err = gfx_initialize(ZVB_CTRL_VID_MODE_GFX_320_8BIT, &vctx);
-    if (err) exit(1);
+    if (err)
+        on_error(err);
+    ;
 
     err = load_palette(&vctx);
-    if(err) exit(1);
+    if (err)
+        on_error(err);
+    ;
 
     gfx_tileset_options options = {
         .compression = TILESET_COMP_RLE,
     };
 
     err = load_tiles(&vctx, &options);
-    if (err) exit(1);
+    if (err)
+        on_error(err);
 
 #ifdef DEBUG
     DEBUG_TILE.tile = 79;
-    DEBUG_TILE.x = SCREEN_HEIGHT / 2;
-    DEBUG_TILE.y = SCREEN_WIDTH / 2;
+    DEBUG_TILE.x    = SCREEN_HEIGHT / 2;
+    DEBUG_TILE.y    = SCREEN_WIDTH / 2;
 #endif
 
     ascii_map(' ', 1, EMPTY_TILE); // space
-    ascii_map(',', 16, 160); // numbers and extras
-    ascii_map('A', 26, 176); // A-Z to a-z
-    ascii_map('a', 28, 176); // a-z + snes icon
+    ascii_map(',', 16, 48);        // numbers and extras
+    ascii_map('A', 26, 64);        // A-Z to a-z
+    ascii_map('a', 28, 64);        // a-z + snes icon
 
     sound_set(0, WAV_SAWTOOTH);
     sound_set(1, WAV_SQUARE);
 
     err = player_init();
-    if(err) exit(1);
+    if (err)
+        on_error(err);
+    ;
 
     err = ball_init();
-    if(err) exit(1);
+    if (err)
+        on_error(err);
+    ;
 
     gfx_enable_screen(1);
 
     sound_init();
 }
 
-void reset(void) {
+void reset(void)
+{
     player_reset();
     ball_reset();
 }
 
-error load_level(uint8_t which) {
+error load_level(uint8_t which)
+{
     level.index = which + 1;
-    launched = 0;
+    launched    = 0;
 
     which %= LEVEL_COUNT;
-
 
     /** debug */
     char text[10];
@@ -202,33 +257,33 @@ error load_level(uint8_t which) {
     nprint_string(&vctx, text, strlen(text), WIDTH - 2, 0);
     /** /debug */
 
-    uint8_t line[LEVEL_WIDTH*2];
-    for(uint8_t y = 0; y < LEVEL_HEIGHT; y++) {
-        for(uint8_t x = 0; x < LEVEL_WIDTH; x++) {
+    uint8_t line[LEVEL_WIDTH * 2];
+    for (uint8_t y = 0; y < LEVEL_HEIGHT; y++) {
+        for (uint8_t x = 0; x < LEVEL_WIDTH; x++) {
             uint8_t offset = (y * LEVEL_WIDTH) + x;
-            uint8_t type = LEVEL_TILES[which][offset];
+            uint8_t type   = LEVEL_TILES[which][offset];
 
             uint8_t tilex = x * 2;
-            Brick *brick = &level.bricks[(y * LEVEL_WIDTH) + x];
-            brick->x = tilex;
-            brick->y = y;
-            if(type > 0) {
+            Brick* brick  = &level.bricks[(y * LEVEL_WIDTH) + x];
+            brick->x      = tilex;
+            brick->y      = y;
+            if (type > 0) {
                 // memcpy(brick, &BRICKS[type-1], sizeof(Brick));
-                brick->health = BRICKS[type-1].health;
+                brick->health = BRICKS[type - 1].health;
                 brick->points = brick->health;
-                brick->l = BRICKS[type-1].l;
-                brick->r = BRICKS[type-1].r;
+                brick->l      = BRICKS[type - 1].l;
+                brick->r      = BRICKS[type - 1].r;
                 level.brick_count++;
             } else {
                 brick->health = 0;
                 brick->points = 0;
-                brick->l = EMPTY_TILE;
-                brick->r = EMPTY_TILE;
+                brick->l      = EMPTY_TILE;
+                brick->r      = EMPTY_TILE;
             }
-            line[tilex] = brick->l;
-            line[tilex+1] = brick->r;
+            line[tilex]     = brick->l;
+            line[tilex + 1] = brick->r;
         }
-        gfx_tilemap_load(&vctx, line, LEVEL_WIDTH*2, LEVEL_LAYER, 0, y);
+        gfx_tilemap_load(&vctx, line, LEVEL_WIDTH * 2, LEVEL_LAYER, 0, y);
     }
 
 #ifdef DEBUG
@@ -236,13 +291,22 @@ error load_level(uint8_t which) {
     nprint_string(&vctx, text, strlen(text), WIDTH - 2, 1);
 #endif
 
+    uint8_t track_index = which % 2;
+    zmt_reset(VOL_50);
+    zos_err_t err = load_zmt(&track, track_index);
+    if (err != ERR_SUCCESS) {
+        printf("failed to load music track %d (%02x)", err, err);
+        on_error(err);
+    }
+
     return 0;
 }
 
-void deinit(void) {
-    zvb_ctrl_l0_scr_x_low = 0;
+void deinit(void)
+{
+    zvb_ctrl_l0_scr_x_low  = 0;
     zvb_ctrl_l0_scr_x_high = 0;
-    zvb_ctrl_l0_scr_y_low = 0;
+    zvb_ctrl_l0_scr_y_low  = 0;
     zvb_ctrl_l0_scr_y_high = 0;
     ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
     sound_deinit();
@@ -251,28 +315,31 @@ void deinit(void) {
 
     // TODO: clear sprites
     gfx_error err;
-    for(uint8_t i = 0; i < PLAYER_MAX_WIDTH + 2; i++) {
-        err = gfx_sprite_set_tile(&vctx, player.sprite_index+i, EMPTY_TILE);
+    for (uint8_t i = 0; i < PLAYER_MAX_WIDTH + 2; i++) {
+        err = gfx_sprite_set_tile(&vctx, player.sprite_index + i, EMPTY_TILE);
     }
     err = gfx_sprite_set_tile(&vctx, ball.sprite_index, EMPTY_TILE);
     // // TODO: error checking
-
 }
 
-uint8_t input(void) {
+uint8_t input(void)
+{
     uint16_t input = keyboard_read();
-    if(controller_mode == 1) {
+    if (controller_mode == 1) {
         input |= controller_read();
     }
 
-
     player.direction.x = DIRECTION_NONE; // not moving
-    if((input & BUTTON_LEFT)) player.direction.x = DIRECTION_LEFT;
-    if((input & BUTTON_RIGHT)) player.direction.x = DIRECTION_RIGHT;
-    if((input & BUTTON_START)) return ACTION_PAUSE;
-    if((input & BUTTON_SELECT)) return ACTION_QUIT;
-    if((input & BUTTON_B)) launched = 1;
-
+    if ((input & BUTTON_LEFT))
+        player.direction.x = DIRECTION_LEFT;
+    if ((input & BUTTON_RIGHT))
+        player.direction.x = DIRECTION_RIGHT;
+    if ((input & BUTTON_START))
+        return ACTION_PAUSE;
+    if ((input & BUTTON_SELECT))
+        return ACTION_QUIT;
+    if ((input & BUTTON_B))
+        launched = 1;
 
     // /**** TESTING ****/
     // if(input & BUTTON_UP && player.width < PLAYER_MAX_WIDTH) player_set_width(player.width+1);
@@ -282,25 +349,29 @@ uint8_t input(void) {
     return 0;
 }
 
-void update(void) {
+void update(void)
+{
     player_move();
     Edge edge = EdgeNone;
-    if(launched) {
-        edge = ball_move();
-        if((edge & EdgeTop)) {
-            nudge++;
-            if(nudge > 2) {
-                ball_nudge(ball.direction.x);
-            }
+    if (!launched)
+        return;
+    edge = ball_move();
+    if ((edge & EdgeTop)) {
+        nudge++;
+        if (nudge > 2) {
+            nudge = 0;
+            ball_nudge(ball.direction.x);
         }
-    } else return;
+    }
 
     uint16_t ball_top = rect_top(&ball.rect);
-    if(ball_top > SCREEN_HEIGHT + SPRITE_HEIGHT) {
-        sound_play(1, 294, 3);
+    if (ball_top > SCREEN_HEIGHT + SPRITE_HEIGHT) {
+        sound_play(VOICE3, 294, 3);
         player.lives--;
         launched = 0;
+        zmt_sound_off();
         msleep(750);
+        zmt_track_reset(&track, 1);
         ball_reset();
         return;
     }
@@ -320,20 +391,14 @@ void update(void) {
 #endif
 
     edge = player_collide(&ball.rect);
-    if(edge != EdgeNone) {
-        sound_play(0, 400, 4);
-        switch(edge) {
+    if (edge != EdgeNone) {
+        sound_play(VOICE3, 400, 4);
+        switch (edge) {
             // uno reverse
-            case EdgeLeft:
-                ball_bounce(edge | EdgeTop);
-                break;
-            case EdgeRight:
-                ball_bounce(edge | EdgeTop);
-                break;
+            case EdgeLeft: ball_bounce(edge | EdgeTop); break;
+            case EdgeRight: ball_bounce(edge | EdgeTop); break;
             case EdgeTop: // fall thru
-            case EdgeBottom:
-                ball_bounce(edge);
-                break;
+            case EdgeBottom: ball_bounce(edge); break;
         }
         // If collides with player, can't possibly collide with bricks ... if/else statement?
         return;
@@ -364,13 +429,15 @@ void update(void) {
     /** /debug */
 
     uint16_t brick_offset = (tile.y * LEVEL_WIDTH) + (tile.x >> 1);
-    if(brick_offset > LEVEL_TILE_COUNT) return;
+    if (brick_offset > LEVEL_TILE_COUNT)
+        return;
 
-    Brick *brick = &level.bricks[brick_offset];
+    Brick* brick = &level.bricks[brick_offset];
 
-    if(brick->health < 1) return;
+    if (brick->health < 1)
+        return;
 
-    sound_play(1, 220, 2);
+    sound_play(VOICE3, 220, 2);
 
     /** DEBUG */
 #ifdef DEBUG
@@ -380,8 +447,10 @@ void update(void) {
     /** /DEBUG */
 
     uint8_t mod = tile.x % 2;
-    if(mod == 1) edge &= (0xFF ^ EdgeLeft);  // remove the left edge from the right tile
-    else edge &= (0xFF ^ EdgeRight);         // remove the right edge from the left tile
+    if (mod == 1)
+        edge &= (0xFF ^ EdgeLeft); // remove the left edge from the right tile
+    else
+        edge &= (0xFF ^ EdgeRight); // remove the right edge from the left tile
 
     /** DEBUG */
 #ifdef DEBUG
@@ -390,24 +459,21 @@ void update(void) {
 #endif
     /** /DEBUG */
 
-    if(edge == EdgeNone) return;
-
+    if (edge == EdgeNone)
+        return;
 
     // move the ball so it doesn't go "inside" the brick
-    if((edge & EdgeTop) > 0) {
-        ball.rect.y = rect_top(&tile.rect) - 1;
+    if ((edge & EdgeTop) > 0) {
+        ball.rect.y   = rect_top(&tile.rect) - 1;
         ball.sprite.y = ball.rect.y;
-    }
-    else if((edge & EdgeBottom) > 0) {
+    } else if ((edge & EdgeBottom) > 0) {
         ball.sprite.y = rect_bottom(&tile.rect) + ball.rect.h + 1;
-         ball.sprite.y = ball.sprite.y;
-    }
-    else if((edge & EdgeRight) > 0) {
-        ball.rect.x = rect_right(&tile.rect) + ball.rect.w + 1;
+        ball.sprite.y = ball.sprite.y;
+    } else if ((edge & EdgeRight) > 0) {
+        ball.rect.x   = rect_right(&tile.rect) + ball.rect.w + 1;
         ball.sprite.x = ball.rect.x;
-    }
-    else if((edge & EdgeLeft) > 0) {
-        ball.rect.x = rect_left(&tile.rect) - 1;
+    } else if ((edge & EdgeLeft) > 0) {
+        ball.rect.x   = rect_left(&tile.rect) - 1;
         ball.sprite.x = ball.rect.x;
     }
 
@@ -415,7 +481,7 @@ void update(void) {
 
     brick->health--;
     nudge = 0;
-    if(brick->health < 1) {
+    if (brick->health < 1) {
         // remove brick
         level.brick_count--;
         player.score += brick->points; // TODO: point modifier???
@@ -423,11 +489,12 @@ void update(void) {
         nprint_string(&vctx, text, strlen(text), 0, 0);
 
         gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x, brick->y);
-        gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x+1, brick->y);
+        gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x + 1, brick->y);
     }
 }
 
-void draw(void) {
+void draw(void)
+{
     gfx_wait_vblank(&vctx);
     player_draw();
     ball_draw();
@@ -439,16 +506,22 @@ void draw(void) {
     gfx_wait_end_vblank(&vctx);
 }
 
-void draw_paused(uint8_t paused) {
+void draw_paused(uint8_t paused)
+{
     char text[6];
-    if(paused) sprintf(text, "PAUSED");
-    else sprintf(text, "      ");
+    if (paused)
+        sprintf(text, "PAUSED");
+    else
+        sprintf(text, "      ");
     nprint_string(&vctx, text, 6, WIDTH / 2 - 3, HEIGHT / 2);
 }
 
-void draw_gameover(uint8_t gameover) {
+void draw_gameover(uint8_t gameover)
+{
     char text[10];
-    if(gameover) sprintf(text, "GAME  OVER");
-    else sprintf(text, "          ");
+    if (gameover)
+        sprintf(text, "GAME  OVER");
+    else
+        sprintf(text, "          ");
     nprint_string(&vctx, text, 10, WIDTH / 2 - 5, HEIGHT / 2);
 }

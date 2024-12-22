@@ -4,24 +4,25 @@
 #ifndef BRICKED_H
 #define BRICKED_H
 
-#define ACTION_NONE         0
-#define ACTION_PAUSE        1
-#define ACTION_CONTINUE     1
-#define ACTION_QUIT         10
+#define ACTION_NONE     0
+#define ACTION_PAUSE    1
+#define ACTION_CONTINUE 1
+#define ACTION_QUIT     10
 
-#define SCREEN_WIDTH        320
-#define SCREEN_HEIGHT       240
-#define WIDTH               20
-#define HEIGHT              15
+#define SCREEN_WIDTH  320
+#define SCREEN_HEIGHT 240
+#define WIDTH         20
+#define HEIGHT        15
 
-#define LEVEL_LAYER         0
-#define UI_LAYER            1
+#define LEVEL_LAYER 0
+#define UI_LAYER    1
 
-#define TILEMAP_OFFSET      0x00U
-#define EMPTY_TILE          0x00U
+#define TILEMAP_OFFSET 0x00U
+#define EMPTY_TILE     0x00U
 
 typedef uint8_t error;
 
+void on_error(zos_err_t err);
 void init(void);
 void deinit(void);
 void reset(void);

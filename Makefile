@@ -86,11 +86,14 @@ ZOS_CFLAGS += -DBREAK
 endif
 
 ifndef ZGDK_PATH
-    $(error "Failure: ZGDK_PATH variable not found. It must point to ZGDK path.")
+	$(error "Failure: ZGDK_PATH variable not found. It must point to ZGDK path.")
 endif
 
-GFX_STRIP = 48
+GFX_STRIP = 4
 
 include $(ZGDK_PATH)/base_sdcc.mk
 
 ## Add your own rules here
+
+# all::
+# 	cp assets/bricked.zmt bin/bricked.zmt
