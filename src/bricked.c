@@ -19,7 +19,6 @@
 #include "player.h"
 
 gfx_context vctx;
-static uint8_t controller_mode = 1;
 static Level level;
 
 // static uint16_t frames = 0;
@@ -58,12 +57,17 @@ uint8_t DEBUG_TILE_INDEX = 100;
 gfx_sprite DEBUG_TILE;
 #endif
 
-void on_error(zos_err_t err)
+void handle_error(zos_err_t err, const char* message, uint8_t fatal)
 {
-    deinit();
-    printf("\nError: %d (%02x)", err, err);
-    exit(err);
+    if (err != ERR_SUCCESS) {
+        if (fatal)
+            deinit();
+        printf("\nError[%d] (%02x) %s", err, err, message);
+        if (fatal)
+            exit(err);
+    }
 }
+
 
 int main(void)
 {
@@ -162,52 +166,24 @@ void init(void)
 {
     zos_err_t err;
 
-    err = keyboard_init();
-    if (err != ERR_SUCCESS) {
-        printf("Failed to init keyboard: %d", err);
-        on_error(err);
-    }
-    err = keyboard_flush();
-    if (err != ERR_SUCCESS) {
-        printf("Failed to flush keyboard: %d", err);
-        on_error(err);
-    }
-
-    err = controller_init();
-    if (err != ERR_SUCCESS) {
-        printf("Failed to init controller: %d", err);
-    }
-    err = controller_flush();
-    if (err != ERR_SUCCESS) {
-        printf("Failed to flush controller: %d", err);
-    }
-    // verify the controller is actually connected
-    uint16_t test = controller_read();
-    // if unconnected, we'll get back 0xFFFF (all buttons pressed)
-    if (test & 0xFFFF) {
-        controller_mode = 0;
-    }
+    err = input_init(true);
+    handle_error(err, "Failed to init input", 1);
 
     /* Disable the screen to prevent artifacts from showing */
     gfx_enable_screen(0);
 
     err = gfx_initialize(ZVB_CTRL_VID_MODE_GFX_320_8BIT, &vctx);
-    if (err)
-        on_error(err);
-    ;
+    handle_error(err, "Failed to init graphics", 1);
 
     err = load_palette(&vctx);
-    if (err)
-        on_error(err);
-    ;
+    handle_error(err, "Failed to load palette", 1);
 
     gfx_tileset_options options = {
         .compression = TILESET_COMP_RLE,
     };
 
     err = load_tiles(&vctx, &options);
-    if (err)
-        on_error(err);
+    handle_error(err, "Failed to load tiles", 1);
 
 #ifdef DEBUG
     DEBUG_TILE.tile = 79;
@@ -224,14 +200,10 @@ void init(void)
     sound_set(1, WAV_SQUARE);
 
     err = player_init();
-    if (err)
-        on_error(err);
-    ;
+    handle_error(err, "Failed to init player", 1);
 
     err = ball_init();
-    if (err)
-        on_error(err);
-    ;
+    handle_error(err, "Failed to init ball", 1);
 
     gfx_enable_screen(1);
 
@@ -294,10 +266,7 @@ error load_level(uint8_t which)
     uint8_t track_index = which % 2;
     zmt_reset(VOL_50);
     zos_err_t err = load_zmt(&track, track_index);
-    if (err != ERR_SUCCESS) {
-        printf("failed to load music track %d (%02x)", err, err);
-        on_error(err);
-    }
+    handle_error(err, "Failed to load ZMT track", 1);
 
     return 0;
 }
@@ -324,10 +293,7 @@ void deinit(void)
 
 uint8_t input(void)
 {
-    uint16_t input = keyboard_read();
-    if (controller_mode == 1) {
-        input |= controller_read();
-    }
+    uint16_t input = input_get();
 
     player.direction.x = DIRECTION_NONE; // not moving
     if ((input & BUTTON_LEFT))
