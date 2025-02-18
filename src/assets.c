@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <zos_errors.h>
 #include <zvb_gfx.h>
-#include <sound/tracker.h>
+#include <zgdk/sound/tracker.h>
 #include "assets.h"
 
 gfx_error load_palette(gfx_context* ctx)

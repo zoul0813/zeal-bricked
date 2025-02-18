@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <zos_errors.h>
 #include <zvb_gfx.h>
-#include <sound/tracker.h>
+#include <zgdk/sound/tracker.h>
 
 void __assets__(void);
 
