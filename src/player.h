@@ -12,16 +12,17 @@
 #define PLAYER_LIVES     3
 
 typedef struct {
-        uint8_t sprite_index;
-        gfx_sprite spritel;
-        gfx_sprite spritem[3];
-        gfx_sprite spriter;
         Rect rect;
         uint8_t width; // width of middle segments
         uint8_t speed;
         uint8_t score;
         uint8_t lives;
         Direction direction;
+
+        /* sprites */
+        gfx_sprite* spritel;
+        gfx_sprite* spritem[3];
+        gfx_sprite* spriter;
 } Player;
 
 #define PADDLE1 3
@@ -34,5 +35,4 @@ zos_err_t player_init(void);
 void player_reset(void);
 void player_move(void);
 Edge player_collide(Rect* rect);
-void player_draw(void);
 #endif

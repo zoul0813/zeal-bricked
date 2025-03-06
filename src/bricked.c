@@ -20,6 +20,7 @@
 
 gfx_context vctx;
 static Level level;
+gfx_sprite SPRITE_ARENA[MAX_SPRITES];
 
 // static uint16_t frames = 0;
 static uint8_t paused   = 0;
@@ -169,6 +170,8 @@ void init(void)
     err = input_init(true);
     handle_error(err, "Failed to init input", 1);
 
+    sprites_register_arena(SPRITE_ARENA, MAX_SPRITES);
+
     /* Disable the screen to prevent artifacts from showing */
     gfx_enable_screen(0);
 
@@ -257,7 +260,7 @@ error load_level(uint8_t which)
             line[tilex]     = brick->l;
             line[tilex + 1] = brick->r;
         }
-        gfx_tilemap_load(&vctx, line, LEVEL_WIDTH * 2, LEVEL_LAYER, 0, y);
+        gfx_tilemap_load(&vctx, line, LEVEL_WIDTH * 2, LAYER0, 0, y);
     }
 
 #ifdef DEBUG
@@ -284,12 +287,7 @@ void deinit(void)
 
     // TODO: clear tilesets
 
-    // TODO: clear sprites
-    gfx_error err;
-    for (uint8_t i = 0; i < PLAYER_MAX_WIDTH + 2; i++) {
-        err = gfx_sprite_set_tile(&vctx, player.sprite_index + i, EMPTY_TILE);
-    }
-    err = gfx_sprite_set_tile(&vctx, ball.sprite_index, EMPTY_TILE);
+    sprites_deregister();
     // // TODO: error checking
 }
 
@@ -433,16 +431,16 @@ void update(void)
     // move the ball so it doesn't go "inside" the brick
     if ((edge & EdgeTop) > 0) {
         ball.rect.y   = rect_top(&tile.rect) - 1;
-        ball.sprite.y = ball.rect.y;
+        ball.sprite->y = ball.rect.y;
     } else if ((edge & EdgeBottom) > 0) {
-        ball.sprite.y = rect_bottom(&tile.rect) + ball.rect.h + 1;
-        ball.sprite.y = ball.sprite.y;
+        ball.sprite->y = rect_bottom(&tile.rect) + ball.rect.h + 1;
+        ball.sprite->y = ball.sprite->y;
     } else if ((edge & EdgeRight) > 0) {
         ball.rect.x   = rect_right(&tile.rect) + ball.rect.w + 1;
-        ball.sprite.x = ball.rect.x;
+        ball.sprite->x = ball.rect.x;
     } else if ((edge & EdgeLeft) > 0) {
         ball.rect.x   = rect_left(&tile.rect) - 1;
-        ball.sprite.x = ball.rect.x;
+        ball.sprite->x = ball.rect.x;
     }
 
     ball_bounce(edge);
@@ -456,16 +454,17 @@ void update(void)
         sprintf(text, "%03d", player.score);
         nprint_string(&vctx, text, strlen(text), 0, 0);
 
-        gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x, brick->y);
-        gfx_tilemap_place(&vctx, EMPTY_TILE, LEVEL_LAYER, brick->x + 1, brick->y);
+        gfx_tilemap_place(&vctx, EMPTY_TILE, LAYER0, brick->x, brick->y);
+        gfx_tilemap_place(&vctx, EMPTY_TILE, LAYER0, brick->x + 1, brick->y);
     }
 }
 
 void draw(void)
 {
     gfx_wait_vblank(&vctx);
-    player_draw();
-    ball_draw();
+    // player_draw();
+    // ball_draw();
+    sprites_render(&vctx);
 
 #ifdef DEBUG
     gfx_sprite_render(&vctx, DEBUG_TILE_INDEX, &DEBUG_TILE);

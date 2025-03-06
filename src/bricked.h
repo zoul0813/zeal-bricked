@@ -14,11 +14,10 @@
 #define WIDTH         20
 #define HEIGHT        15
 
-#define LEVEL_LAYER 0
-#define UI_LAYER    1
-
 #define TILEMAP_OFFSET 0x00U
 #define EMPTY_TILE     0x00U
+
+#define MAX_SPRITES   32
 
 typedef uint8_t error;
 

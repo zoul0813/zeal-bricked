@@ -7,15 +7,13 @@ Ball ball;
 
 zos_err_t ball_init(void)
 {
-    zos_err_t err;
-    ball.sprite.tile  = 1;
     ball.rect.w       = BALL_WIDTH;
     ball.rect.h       = BALL_HEIGHT;
-    ball.sprite_index = PLAYER_MAX_WIDTH + 2;
 
-    err = gfx_sprite_render(&vctx, ball.sprite_index, &ball.sprite);
-    if (err)
-        return ERR_FAILURE; // err;
+    gfx_sprite sprite = {
+        .tile = 1,
+    };
+    ball.sprite = sprites_register(sprite);
 
     ball_reset();
 
@@ -25,10 +23,10 @@ zos_err_t ball_init(void)
 void ball_reset(void)
 {
     // offset by 3 so it's not "perfectly center"
-    ball.sprite.x    = ((SCREEN_WIDTH / 2) - SPRITE_WIDTH) + 3;
-    ball.sprite.y    = SCREEN_HEIGHT - (SPRITE_HEIGHT * 5);
-    ball.rect.x      = ball.sprite.x;
-    ball.rect.y      = ball.sprite.y;
+    ball.sprite->x    = ((SCREEN_WIDTH / 2) - SPRITE_WIDTH) + 3;
+    ball.sprite->y    = SCREEN_HEIGHT - (SPRITE_HEIGHT * 5);
+    ball.rect.x      = ball.sprite->x;
+    ball.rect.y      = ball.sprite->y;
     ball.direction.x = DIRECTION_RIGHT;
     ball.direction.y = DIRECTION_UP;
     ball.speed       = BALL_SPEED;
@@ -51,15 +49,15 @@ void ball_bounce(Edge edge)
 
 void ball_nudge(int8_t direction)
 {
-    ball.sprite.x += direction * 2;
-    ball.rect.x    = ball.sprite.x;
+    ball.sprite->x += direction * 2;
+    ball.rect.x    = ball.sprite->x;
 }
 
 Edge ball_move(void)
 {
 
-    uint16_t x = ball.sprite.x;
-    uint16_t y = ball.sprite.y;
+    uint16_t x = ball.sprite->x;
+    uint16_t y = ball.sprite->y;
 
     switch (ball.edge) {
         case EdgeLeft:
@@ -105,15 +103,10 @@ Edge ball_move(void)
         edge = EdgeRight;
     }
 
-    ball.sprite.x = x;
-    ball.sprite.y = y;
+    ball.sprite->x = x;
+    ball.sprite->y = y;
     ball.rect.x   = x;
     ball.rect.y   = y;
 
     return edge;
-}
-
-void ball_draw(void)
-{
-    gfx_sprite_render(&vctx, ball.sprite_index, &ball.sprite);
 }
