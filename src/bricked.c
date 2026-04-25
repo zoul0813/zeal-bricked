@@ -183,11 +183,7 @@ void init(void)
     err = load_palette(&vctx);
     handle_error(err, "Failed to load palette", 1);
 
-    gfx_tileset_options options = {
-        .compression = TILESET_COMP_RLE,
-    };
-
-    err = load_tiles(&vctx, &options);
+    err = load_tiles(&vctx);
     handle_error(err, "Failed to load tiles", 1);
 
 #ifdef DEBUG

@@ -11,10 +11,10 @@ gfx_error load_palette(gfx_context* ctx)
     return gfx_palette_load(ctx, &_palette_start, palette_size, 0);
 }
 
-gfx_error load_tiles(gfx_context* ctx, gfx_tileset_options* options)
+gfx_error load_tiles(gfx_context* ctx)
 {
     const size_t size = &_tiles_end - &_tiles_start;
-    return gfx_tileset_load(ctx, &_tiles_start, size, options);
+    return gfx_tileset_load_rle(ctx, &_tiles_start, size, 0, 0, 0);
 }
 
 zos_err_t load_zmt(track_t* track, uint8_t index)

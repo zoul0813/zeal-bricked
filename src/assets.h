@@ -15,5 +15,5 @@ extern uint8_t _zmt_track2_start;
 extern uint8_t _zmt_track2_end;
 
 gfx_error load_palette(gfx_context* ctx);
-gfx_error load_tiles(gfx_context* ctx, gfx_tileset_options* options);
+gfx_error load_tiles(gfx_context* ctx);
 zos_err_t load_zmt(track_t* track, uint8_t index);
