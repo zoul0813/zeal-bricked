@@ -101,29 +101,35 @@ Edge player_collide(Rect* rect)
     const uint16_t rect_r = rect_right(rect);
 
     // // is rect within the players Y region
-    if (player_t > rect_b + 1)
+    if (rect_b < player_t)
         return EdgeNone;
-    if (player_b < rect_t - 1)
+    if (rect_t > player_b)
         return EdgeNone;
 
     // // is rect within the players X region
-    if (player_l > rect_r + 1)
+    if (rect_r < player_l)
         return EdgeNone;
-    if (player_r < rect_l - 1)
+    if (rect_l > player_r)
         return EdgeNone;
 
+    int16_t overlap_top    = (int16_t)rect_b - (int16_t)player_t;
+    int16_t overlap_bottom = (int16_t)player_b - (int16_t)rect_t;
+    int16_t overlap_left   = (int16_t)rect_r - (int16_t)player_l;
+    int16_t overlap_right  = (int16_t)player_r - (int16_t)rect_l;
 
-    Edge edge = EdgeNone;
-    if (rect_r <= player_l)
-        edge |= EdgeLeft;
-    else if (rect_l >= player_r)
-        edge |= EdgeRight;
+    Edge edge       = EdgeTop;
+    int16_t overlap = overlap_top;
 
-    if (rect_t >= player_b)
-        edge |= EdgeBottom;
-    else if (rect_b <= player_t)
-        edge |= EdgeTop;
+    if (overlap_bottom < overlap) {
+        edge    = EdgeBottom;
+        overlap = overlap_bottom;
+    }
+    if (overlap_left < overlap) {
+        edge    = EdgeLeft;
+        overlap = overlap_left;
+    }
+    if (overlap_right < overlap)
+        edge = EdgeRight;
 
-    // no collision
     return edge;
 }

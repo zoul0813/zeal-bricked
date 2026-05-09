@@ -403,10 +403,11 @@ void update(void)
 #endif
     /** /debug */
 
-    uint16_t brick_offset = (tile.y * LEVEL_WIDTH) + (tile.x >> 1);
-    if (brick_offset > LEVEL_TILE_COUNT)
+    uint8_t brick_x = tile.x >> 1;
+    if (tile.y >= LEVEL_HEIGHT || brick_x >= LEVEL_WIDTH)
         return;
 
+    uint16_t brick_offset = (tile.y * LEVEL_WIDTH) + brick_x;
     Brick* brick = &level.bricks[brick_offset];
 
     if (brick->health < 1)
@@ -423,11 +424,10 @@ void update(void)
 #endif
     /** /DEBUG */
 
-    uint8_t mod = tile.x % 2;
-    if (mod == 1)
-        edge &= (0xFF ^ EdgeLeft); // remove the left edge from the right tile
-    else
-        edge &= (0xFF ^ EdgeRight); // remove the right edge from the left tile
+    uint8_t seam_edge = (tile.x % 2) == 1 ? EdgeLeft : EdgeRight;
+    uint8_t masked_edge = edge & (0xFF ^ seam_edge);
+    if (masked_edge != EdgeNone)
+        edge = masked_edge;
 
     /** DEBUG */
 #ifdef DEBUG
@@ -443,16 +443,24 @@ void update(void)
 
     // move the ball so it doesn't go "inside" the brick
     if ((edge & EdgeTop) > 0) {
-        ball.rect.y   = rect_top(&tile.rect) - 1;
+        uint16_t tile_top = rect_top(&tile.rect);
+        ball.rect.y       = tile_top > ball.rect.h ? tile_top - 1 : ball.rect.h;
         ball.sprite->y = ball.rect.y;
     } else if ((edge & EdgeBottom) > 0) {
-        ball.sprite->y = rect_bottom(&tile.rect) + ball.rect.h + 1;
-        ball.sprite->y = ball.sprite->y;
-    } else if ((edge & EdgeRight) > 0) {
+        ball.rect.y   = rect_bottom(&tile.rect) + ball.rect.h + 1;
+        if (ball.rect.y > SCREEN_HEIGHT)
+            ball.rect.y = SCREEN_HEIGHT;
+        ball.sprite->y = ball.rect.y;
+    }
+
+    if ((edge & EdgeRight) > 0) {
         ball.rect.x   = rect_right(&tile.rect) + ball.rect.w + 1;
+        if (ball.rect.x > SCREEN_WIDTH)
+            ball.rect.x = SCREEN_WIDTH;
         ball.sprite->x = ball.rect.x;
     } else if ((edge & EdgeLeft) > 0) {
-        ball.rect.x   = rect_left(&tile.rect) - 1;
+        uint16_t tile_left = rect_left(&tile.rect);
+        ball.rect.x        = tile_left > ball.rect.w ? tile_left - 1 : ball.rect.w;
         ball.sprite->x = ball.rect.x;
     }
 
