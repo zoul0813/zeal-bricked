@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <zvb_gfx.h>
 #include <zgdk.h>
 

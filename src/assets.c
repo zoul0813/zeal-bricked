@@ -1,7 +1,7 @@
-#include <stdio.h>
 #include <zos_errors.h>
 #include <zvb_gfx.h>
 #include <zgdk/sound/tracker.h>
+#include <zgdk/assets.h>
 #include "assets.h"
 
 gfx_error load_palette(gfx_context* ctx)
@@ -35,24 +35,8 @@ zos_err_t load_zmt(track_t* track, uint8_t index)
 
 void __assets__(void) __naked
 {
-    __asm__(
-        // shared palette
-        "__palette_start:\n"
-        "    .incbin \"assets/bricked.ztp\"\n"
-        "__palette_end:\n"
-
-        // tiles
-        "__tiles_start:\n"
-        "    .incbin \"assets/bricked.zts\"\n"
-        "__tiles_end:\n"
-
-        // background music
-        // Track 1 - Arkanoid
-        "__zmt_track1_start:\n"
-        "    .incbin \"assets/bricked.zmt\"\n"
-        "__zmt_track1_end:\n"
-        // Track 2 - Mario
-        "__zmt_track2_start:\n"
-        "    .incbin \"assets/mario.zmt\"\n"
-        "__zmt_track2_end:\n");
+    INCLUDE_ASSET("palette", "assets/bricked.ztp");
+    INCLUDE_ASSET("tiles", "assets/bricked.zts");
+    INCLUDE_ASSET("zmt_track1", "assets/bricked.zmt");
+    INCLUDE_ASSET("zmt_track2", "assets/mario.zmt");
 }

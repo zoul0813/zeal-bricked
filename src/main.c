@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <string.h>
+#include <core.h>
 #include <zos_errors.h>
 #include <zos_sys.h>
 #include <zos_vfs.h>
@@ -63,7 +62,12 @@ void handle_error(zos_err_t err, const char* message, uint8_t fatal)
     if (err != ERR_SUCCESS) {
         if (fatal)
             deinit();
-        printf("\nError[%d] (%02x) %s", err, err, message);
+        put_s("\nError[");
+        put_hex8(err);
+        put_s("] (");
+        put_hex8(err);
+        put_s(") ");
+        put_s(message);
         if (fatal)
             exit(err);
     }
@@ -220,14 +224,15 @@ void reset(void)
 error load_level(uint8_t which)
 {
     level.index = which + 1;
+    level.brick_count = 0;
     launched    = 0;
 
     which %= LEVEL_COUNT;
 
     /** debug */
     char text[10];
-    sprintf(text, "%02d", level.index);
-    nprint_string(&vctx, text, strlen(text), WIDTH - 2, 0);
+    itoa_pad(level.index, text, 10, 'A', '0', 2);
+    nprint_string(&vctx, text, 2, WIDTH - 2, 0);
     /** /debug */
 
     uint8_t line[LEVEL_WIDTH * 2];
@@ -260,8 +265,8 @@ error load_level(uint8_t which)
     }
 
 #ifdef DEBUG
-    sprintf(text, "%02d", level.brick_count);
-    nprint_string(&vctx, text, strlen(text), WIDTH - 2, 1);
+    itoa_pad(level.brick_count, text, 10, 'A', '0', 2);
+    nprint_string(&vctx, text, 2, WIDTH - 2, 1);
 #endif
 
     uint8_t track_index = which % 2;
@@ -342,13 +347,17 @@ void update(void)
     char text[10];
 
 #ifdef DEBUG
-    sprintf(text, "W%03d", ball.rect.w);
+    text[0] = 'W';
+    itoa_pad(ball.rect.w, text + 1, 10, 'A', '0', 3);
     nprint_string(&vctx, text, 5, 0, HEIGHT - 3);
-    sprintf(text, "H%03d", ball.rect.h);
+    text[0] = 'H';
+    itoa_pad(ball.rect.h, text + 1, 10, 'A', '0', 3);
     nprint_string(&vctx, text, 5, 5, HEIGHT - 3);
-    sprintf(text, "X%03d", ball.rect.x);
+    text[0] = 'X';
+    itoa_pad(ball.rect.x, text + 1, 10, 'A', '0', 3);
     nprint_string(&vctx, text, 5, 0, HEIGHT - 4);
-    sprintf(text, "Y%03d", ball.rect.y);
+    text[0] = 'Y';
+    itoa_pad(ball.rect.y, text + 1, 10, 'A', '0', 3);
     nprint_string(&vctx, text, 5, 5, HEIGHT - 4);
 #endif
 
@@ -379,14 +388,18 @@ void update(void)
 
     /** debug */
 #ifdef DEBUG
-    sprintf(text, "W%03d", tile.rect.w);
-    nprint_string(&vctx, text, strlen(text), WIDTH - 9, HEIGHT - 3);
-    sprintf(text, "H%03d", tile.rect.h);
-    nprint_string(&vctx, text, strlen(text), WIDTH - 4, HEIGHT - 3);
-    sprintf(text, "X%03d", tile.rect.x);
-    nprint_string(&vctx, text, strlen(text), WIDTH - 9, HEIGHT - 4);
-    sprintf(text, "Y%03d", tile.rect.y);
-    nprint_string(&vctx, text, strlen(text), WIDTH - 4, HEIGHT - 4);
+    text[0] = 'W';
+    itoa_pad(tile.rect.w, text + 1, 10, 'A', '0', 3);
+    nprint_string(&vctx, text, 5, WIDTH - 9, HEIGHT - 3);
+    text[0] = 'H';
+    itoa_pad(tile.rect.h, text + 1, 10, 'A', '0', 3);
+    nprint_string(&vctx, text, 5, WIDTH - 4, HEIGHT - 3);
+    text[0] = 'X';
+    itoa_pad(tile.rect.x, text + 1, 10, 'A', '0', 3);
+    nprint_string(&vctx, text, 5, WIDTH - 9, HEIGHT - 4);
+    text[0] = 'Y';
+    itoa_pad(tile.rect.y, text + 1, 10, 'A', '0', 3);
+    nprint_string(&vctx, text, 5, WIDTH - 4, HEIGHT - 4);
 #endif
     /** /debug */
 
@@ -403,7 +416,9 @@ void update(void)
 
     /** DEBUG */
 #ifdef DEBUG
-    sprintf(text, "EB%02d", edge);
+    text[0] = 'E';
+    text[1] = 'B';
+    itoa_pad(edge, text + 2, 10, 'A', '0', 2);
     nprint_string(&vctx, text, 4, 0, HEIGHT - 5);
 #endif
     /** /DEBUG */
@@ -416,7 +431,9 @@ void update(void)
 
     /** DEBUG */
 #ifdef DEBUG
-    sprintf(text, "EA%02d", edge);
+    text[0] = 'E';
+    text[1] = 'A';
+    itoa_pad(edge, text + 2, 10, 'A', '0', 2);
     nprint_string(&vctx, text, 4, 0, HEIGHT - 6);
 #endif
     /** /DEBUG */
@@ -447,8 +464,8 @@ void update(void)
         // remove brick
         level.brick_count--;
         player.score += brick->points; // TODO: point modifier???
-        sprintf(text, "%03d", player.score);
-        nprint_string(&vctx, text, strlen(text), 0, 0);
+        itoa_pad(player.score, text, 10, 'A', '0', 3);
+        nprint_string(&vctx, text, 3, 0, 0);
 
         gfx_tilemap_place(&vctx, EMPTY_TILE, LAYER0, brick->x, brick->y);
         gfx_tilemap_place(&vctx, EMPTY_TILE, LAYER0, brick->x + 1, brick->y);
@@ -471,20 +488,16 @@ void draw(void)
 
 void draw_paused(uint8_t paused)
 {
-    char text[6];
     if (paused)
-        sprintf(text, "PAUSED");
+        nprint_string(&vctx, "PAUSED", 6, WIDTH / 2 - 3, HEIGHT / 2);
     else
-        sprintf(text, "      ");
-    nprint_string(&vctx, text, 6, WIDTH / 2 - 3, HEIGHT / 2);
+        nprint_string(&vctx, "      ", 6, WIDTH / 2 - 3, HEIGHT / 2);
 }
 
 void draw_gameover(uint8_t gameover)
 {
-    char text[10];
     if (gameover)
-        sprintf(text, "GAME  OVER");
+        nprint_string(&vctx, "GAME  OVER", 10, WIDTH / 2 - 5, HEIGHT / 2);
     else
-        sprintf(text, "          ");
-    nprint_string(&vctx, text, 10, WIDTH / 2 - 5, HEIGHT / 2);
+        nprint_string(&vctx, "          ", 10, WIDTH / 2 - 5, HEIGHT / 2);
 }

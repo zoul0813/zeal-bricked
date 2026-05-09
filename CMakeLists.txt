@@ -42,9 +42,17 @@ zos_use(zvb)
 find_package(ZVB_SDK REQUIRED)
 target_link_libraries(${target_name} PUBLIC zvb)
 
+zos_use(coreutils)
+find_package(COREUTILS REQUIRED)
+target_link_libraries(${target_name} PUBLIC core)
+
 zos_use(zgdk)
 find_package(ZGDK REQUIRED)
 target_link_libraries(${target_name} PUBLIC zgdk)
+
+target_compile_options(${target_name} PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:--nostdlib>
+)
 
 # -------------------------------
 # Assets
