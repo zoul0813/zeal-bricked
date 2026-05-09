@@ -368,7 +368,24 @@ void update(void)
             // uno reverse
             case EdgeLeft: ball_bounce(edge | EdgeTop); break;
             case EdgeRight: ball_bounce(edge | EdgeTop); break;
-            case EdgeTop: // fall thru
+            case EdgeTop: {
+                uint16_t player_l   = rect_left(&player.rect);
+                uint16_t player_r   = rect_right(&player.rect);
+                uint16_t zone_width = player.rect.w / 3;
+                uint16_t ball_x     = rect_left(&ball.rect) + (ball.rect.w / 2);
+
+                if (ball_x < player_l + zone_width)
+                    edge |= EdgeLeft;
+                else if (ball_x > player_r - zone_width)
+                    edge |= EdgeRight;
+                else if (player.direction.x == DIRECTION_LEFT)
+                    edge |= EdgeLeft;
+                else if (player.direction.x == DIRECTION_RIGHT)
+                    edge |= EdgeRight;
+
+                ball_bounce(edge);
+                break;
+            }
             case EdgeBottom: ball_bounce(edge); break;
         }
         // If collides with player, can't possibly collide with bricks ... if/else statement?
