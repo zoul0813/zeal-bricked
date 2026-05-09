@@ -316,6 +316,74 @@ uint8_t input(void)
     return 0;
 }
 
+static bool brick_from_tile(Tile* tile, Brick** brick)
+{
+    uint8_t brick_x = tile->x >> 1;
+    if (tile->y >= LEVEL_HEIGHT || brick_x >= LEVEL_WIDTH)
+        return false;
+
+    *brick = &level.bricks[(tile->y * LEVEL_WIDTH) + brick_x];
+    return (*brick)->health > 0;
+}
+
+static void brick_get_rect(Brick* brick, Rect* rect)
+{
+    rect->x = (brick->x + 2) * TILE_WIDTH;
+    rect->y = (brick->y + 1) * TILE_HEIGHT;
+    rect->w = BRICK_WIDTH;
+    rect->h = BRICK_HEIGHT;
+}
+
+static bool brick_collide(Rect* rect, Direction* direction, Tile* tile, Edge* edge, Brick** brick, Rect* brick_rect)
+{
+    TileCollision collision;
+    tile_collide_ex(rect, direction, &collision);
+    Brick* brick_h = NULL;
+    Brick* brick_v = NULL;
+    Brick* brick_c = NULL;
+    Rect rect_h;
+    Rect rect_v;
+    Rect rect_c;
+    bool found_h = collision.hit_h && brick_from_tile(&collision.tile_h, &brick_h);
+    bool found_v = collision.hit_v && brick_from_tile(&collision.tile_v, &brick_v);
+    bool found_c = collision.hit_c && brick_from_tile(&collision.tile_c, &brick_c);
+
+    if (found_h)
+        brick_get_rect(brick_h, &rect_h);
+    if (found_v)
+        brick_get_rect(brick_v, &rect_v);
+    if (found_c)
+        brick_get_rect(brick_c, &rect_c);
+
+    if (found_v) {
+        *tile       = collision.tile_v;
+        *edge       = collision.edge_v;
+        *brick      = brick_v;
+        *brick_rect = rect_v;
+        if (found_h && brick_h == brick_v)
+            *edge |= collision.edge_h;
+        return true;
+    }
+
+    if (found_h) {
+        *tile       = collision.tile_h;
+        *edge       = collision.edge_h;
+        *brick      = brick_h;
+        *brick_rect = rect_h;
+        return true;
+    }
+
+    if (found_c) {
+        *tile       = collision.tile_c;
+        *edge       = collision.edge_c;
+        *brick      = brick_c;
+        *brick_rect = rect_c;
+        return true;
+    }
+
+    return false;
+}
+
 void update(void)
 {
     player_move();
@@ -394,9 +462,10 @@ void update(void)
 
     // get the balls current tile coords
     Tile tile;
-    // tile.rect.h = BRICK_HEIGHT;
-    // tile.rect.w = BRICK_WIDTH;
-    edge = tile_collide(&ball.rect, &ball.direction, &tile);
+    Brick* brick;
+    Rect brick_rect;
+    if (!brick_collide(&ball.rect, &ball.direction, &tile, &edge, &brick, &brick_rect))
+        return;
 
 #ifdef DEBUG
     DEBUG_TILE.x = tile.rect.x;
@@ -420,16 +489,6 @@ void update(void)
 #endif
     /** /debug */
 
-    uint8_t brick_x = tile.x >> 1;
-    if (tile.y >= LEVEL_HEIGHT || brick_x >= LEVEL_WIDTH)
-        return;
-
-    uint16_t brick_offset = (tile.y * LEVEL_WIDTH) + brick_x;
-    Brick* brick = &level.bricks[brick_offset];
-
-    if (brick->health < 1)
-        return;
-
     sound_play(VOICE3, 220, 2);
 
     /** DEBUG */
@@ -440,11 +499,6 @@ void update(void)
     nprint_string(&vctx, text, 4, 0, HEIGHT - 5);
 #endif
     /** /DEBUG */
-
-    uint8_t seam_edge = (tile.x % 2) == 1 ? EdgeLeft : EdgeRight;
-    uint8_t masked_edge = edge & (0xFF ^ seam_edge);
-    if (masked_edge != EdgeNone)
-        edge = masked_edge;
 
     /** DEBUG */
 #ifdef DEBUG
@@ -460,24 +514,24 @@ void update(void)
 
     // move the ball so it doesn't go "inside" the brick
     if ((edge & EdgeTop) > 0) {
-        uint16_t tile_top = rect_top(&tile.rect);
-        ball.rect.y       = tile_top > ball.rect.h ? tile_top - 1 : ball.rect.h;
+        uint16_t brick_top = rect_top(&brick_rect);
+        ball.rect.y        = brick_top > ball.rect.h ? brick_top - 1 : ball.rect.h;
         ball.sprite->y = ball.rect.y;
     } else if ((edge & EdgeBottom) > 0) {
-        ball.rect.y   = rect_bottom(&tile.rect) + ball.rect.h + 1;
+        ball.rect.y   = rect_bottom(&brick_rect) + ball.rect.h + 1;
         if (ball.rect.y > SCREEN_HEIGHT)
             ball.rect.y = SCREEN_HEIGHT;
         ball.sprite->y = ball.rect.y;
     }
 
     if ((edge & EdgeRight) > 0) {
-        ball.rect.x   = rect_right(&tile.rect) + ball.rect.w + 1;
+        ball.rect.x   = rect_right(&brick_rect) + ball.rect.w + 1;
         if (ball.rect.x > SCREEN_WIDTH)
             ball.rect.x = SCREEN_WIDTH;
         ball.sprite->x = ball.rect.x;
     } else if ((edge & EdgeLeft) > 0) {
-        uint16_t tile_left = rect_left(&tile.rect);
-        ball.rect.x        = tile_left > ball.rect.w ? tile_left - 1 : ball.rect.w;
+        uint16_t brick_left = rect_left(&brick_rect);
+        ball.rect.x         = brick_left > ball.rect.w ? brick_left - 1 : ball.rect.w;
         ball.sprite->x = ball.rect.x;
     }
 
