@@ -5,6 +5,9 @@
 
 Ball ball;
 
+#define BALL_BASE_VELOCITY 38
+#define BALL_VELOCITY(value) (((value) * BALL_BASE_VELOCITY) / (1 << BALL_FP_SHIFT))
+
 static void ball_sync_position(void)
 {
     ball.x_fp = (int16_t)ball.sprite->x << BALL_FP_SHIFT;
@@ -49,10 +52,9 @@ void ball_reset(void)
     ball.sprite->y    = SCREEN_HEIGHT - (SPRITE_HEIGHT * 5);
     ball.rect.x      = ball.sprite->x;
     ball.rect.y      = ball.sprite->y;
-    ball.speed       = BALL_SPEED;
     ball.edge        = EdgeNone;
     ball_sync_position();
-    ball_set_velocity(BALL_SPEED << BALL_FP_SHIFT, -(BALL_SPEED << BALL_FP_SHIFT));
+    ball_set_velocity(BALL_BASE_VELOCITY, -BALL_BASE_VELOCITY);
 }
 
 void ball_bounce(Edge edge)
@@ -76,8 +78,26 @@ void ball_bounce(Edge edge)
 
 void ball_paddle_bounce(uint16_t ball_center_x, uint16_t paddle_l, uint16_t paddle_w, int8_t paddle_direction)
 {
-    static const int8_t velocity_x[] = { -40, -34, -26, -14, 14, 26, 34, 40 };
-    static const int8_t velocity_y[] = { -22, -30, -37, -43, -43, -37, -30, -22 };
+    static const int8_t velocity_x[] = {
+        BALL_VELOCITY(-20),
+        BALL_VELOCITY(-17),
+        BALL_VELOCITY(-13),
+        BALL_VELOCITY(-7),
+        BALL_VELOCITY(7),
+        BALL_VELOCITY(13),
+        BALL_VELOCITY(17),
+        BALL_VELOCITY(20),
+    };
+    static const int8_t velocity_y[] = {
+        BALL_VELOCITY(-11),
+        BALL_VELOCITY(-15),
+        BALL_VELOCITY(-19),
+        BALL_VELOCITY(-21),
+        BALL_VELOCITY(-21),
+        BALL_VELOCITY(-19),
+        BALL_VELOCITY(-15),
+        BALL_VELOCITY(-11),
+    };
     int16_t hit_x = (int16_t)ball_center_x - (int16_t)paddle_l;
     int8_t zone;
 

@@ -6,14 +6,12 @@
 #ifndef BALLS_H
 #define BALLS_H
 
-#define BALL_SPEED  2
 #define BALL_WIDTH  8
 #define BALL_HEIGHT 8
 #define BALL_FP_SHIFT 4
 
 typedef struct {
         Edge edge;
-        uint8_t speed;
         Direction direction;
         int16_t velocity_x;
         int16_t velocity_y;
