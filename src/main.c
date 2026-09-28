@@ -9,6 +9,7 @@
 #define MAX_RECORDS 2048
 
 #include <zgdk.h>
+#include <zgdk/tilemap/scroll.h>
 
 #include "assets.h"
 #include "ball.h"
@@ -182,7 +183,14 @@ void init(void)
     err = gfx_initialize(ZVB_CTRL_VID_MODE_GFX_320_8BIT, &vctx);
     handle_error(err, "Failed to init graphics", 1);
 
-    tilemap_fill(&vctx, LAYER1, EMPTY_TILE, 0, 0, WIDTH, HEIGHT);
+    tilemap_scroll(LAYER0, 0, 0);
+    tilemap_scroll(LAYER1, 0, 0);
+
+    err = tilemap_fill(&vctx, LAYER0, EMPTY_TILE, 0, 0, 80, 40);
+    handle_error(err, "Failed to clear layer 0", 1);
+
+    err = tilemap_fill(&vctx, LAYER1, EMPTY_TILE, 0, 0, 80, 40);
+    handle_error(err, "Failed to clear layer 1", 1);
 
     err = load_palette(&vctx);
     handle_error(err, "Failed to load palette", 1);
@@ -279,10 +287,8 @@ error load_level(uint8_t which)
 
 void deinit(void)
 {
-    zvb_ctrl_l0_scr_x_low  = 0;
-    zvb_ctrl_l0_scr_x_high = 0;
-    zvb_ctrl_l0_scr_y_low  = 0;
-    zvb_ctrl_l0_scr_y_high = 0;
+    tilemap_scroll(LAYER0, 0, 0);
+    tilemap_scroll(LAYER1, 0, 0);
     ioctl(DEV_STDOUT, CMD_RESET_SCREEN, NULL);
     sound_deinit();
 
