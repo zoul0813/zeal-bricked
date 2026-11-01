@@ -126,8 +126,12 @@ reset:
             continue;
 
 #ifdef FRAMELOCK
-        bool force_process = controller_pressed(BUTTON_Y);
-        if (force_process || controller_pressed(BUTTON_X)) {
+        uint16_t pad = controller_read();
+        if (!controller_pad_valid(pad)) {
+            pad = 0;
+        }
+        bool force_process = controller_pressed(pad, BUTTON_Y);
+        if (force_process || controller_pressed(pad, BUTTON_X)) {
             if (force_process || process_frame == 0) {
                 process_frame = 1;
 #endif
